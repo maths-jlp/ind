@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compte à rebours — jlp Maths Tools</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #fafaf7;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #6b6558;
+    --line: #e5e0d4;
+    --accent: #8b2018;
+    --warn: #c2410c;
+    --done: #166534;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'EB Garamond', Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+  }
+
+  .top-bar {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .back-link {
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.15s;
+  }
+  .back-link:hover {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  h1 .accent { color: var(--accent); }
+
+  .main {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+
+  /* Affichage du temps */
+  .display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 180px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    line-height: 1;
+    user-select: none;
+    transition: color 0.3s;
+  }
+  .display.warning { color: var(--warn); }
+  .display.done {
+    color: var(--accent);
+    animation: pulse 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes pulse {
+    from { opacity: 1; }
+    to { opacity: 0.4; }
+  }
+
+  /* Saisie */
+  .input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: var(--panel);
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .input-group label {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .input-group input {
+    width: 60px;
+    padding: 6px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg);
+  }
+  .input-group input:focus { outline: none; border-color: var(--accent); }
+
+  /* Boutons rapides */
+  .presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .preset-btn {
+    padding: 8px 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    transition: all 0.15s;
+  }
+  .preset-btn:hover {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+
+  /* Boutons d'action */
+  .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'EB Garamond', serif;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--ink); color: var(--bg); }
+  .btn-primary:hover { background: var(--accent); }
+  .btn-secondary {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Plein écran */
+  .fullscreen-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 8px 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    z-index: 100;
+  }
+  .fullscreen-toggle:hover { background: var(--ink); color: var(--bg); }
+
+  body.fullscreen .top-bar,
+  body.fullscreen .input-group,
+  body.fullscreen .presets {
+    display: none;
+  }
+  body.fullscreen .display {
+    font-size: 40vw;
+    line-height: 1;
+  }
+  body.fullscreen .main {
+    justify-content: center;
+    min-height: 90vh;
+  }
+
+  @media (max-width: 700px) {
+    .display { font-size: 90px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>jlp <span class="accent">Maths</span> Tools — Compte à rebours</h1>
+  <a href="index.html" class="back-link">← Tableau de bord</a>
+</div>
+
+<button class="fullscreen-toggle" onclick="toggleFullscreen()">⛶ Plein écran</button>
+
+<div class="main">
+
+  <div class="display" id="display">05:00</div>
+
+  <div class="input-group">
+    <label>Minutes</label>
+    <input type="number" id="minutes" min="0" max="180" value="5">
+    <label>Secondes</label>
+    <input type="number" id="seconds" min="0" max="59" value="0">
+  </div>
+
+  <div class="presets">
+    <button class="preset-btn" onclick="setPreset(1)">1 min</button>
+    <button class="preset-btn" onclick="setPreset(2)">2 min</button>
+    <button class="preset-btn" onclick="setPreset(3)">3 min</button>
+    <button class="preset-btn" onclick="setPreset(5)">5 min</button>
+    <button class="preset-btn" onclick="setPreset(10)">10 min</button>
+    <button class="preset-btn" onclick="setPreset(15)">15 min</button>
+    <button class="preset-btn" onclick="setPreset(30)">30 min</button>
+    <button class="preset-btn" onclick="setPreset(60)">1 h</button>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="startBtn" onclick="toggleTimer()">Démarrer</button>
+    <button class="btn btn-secondary" onclick="resetTimer()">Réinitialiser</button>
+  </div>
+
+</div>
+
+<script>
+  let totalSeconds = 300;
+  let remaining = 300;
+  let timerId = null;
+  let running = false;
+  const display = document.getElementById('display');
+  const startBtn = document.getElementById('startBtn');
+  const minutesInput = document.getElementById('minutes');
+  const secondsInput = document.getElementById('seconds');
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  }
+
+  function updateDisplay() {
+    display.textContent = formatTime(remaining);
+    display.classList.toggle('warning', remaining > 0 && remaining <= 30);
+    display.classList.toggle('done', remaining === 0);
+  }
+
+  function readInputs() {
+    const m = Math.max(0, parseInt(minutesInput.value) || 0);
+    const s = Math.max(0, Math.min(59, parseInt(secondsInput.value) || 0));
+    totalSeconds = m * 60 + s;
+    remaining = totalSeconds;
+    updateDisplay();
+  }
+
+  function setPreset(minutes) {
+    minutesInput.value = minutes;
+    secondsInput.value = 0;
+    readInputs();
+    if (running) stopTimer();
+  }
+
+  function toggleTimer() {
+    if (running) stopTimer();
+    else startTimer();
+  }
+
+  function startTimer() {
+    if (remaining === 0) readInputs();
+    if (remaining === 0) return;
+    running = true;
+    startBtn.textContent = 'Pause';
+    timerId = setInterval(() => {
+      remaining--;
+      updateDisplay();
+      if (remaining === 0) {
+        stopTimer();
+        playBeep();
+      }
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerId);
+    running = false;
+    startBtn.textContent = 'Reprendre';
+  }
+
+  function resetTimer() {
+    stopTimer();
+    readInputs();
+    startBtn.textContent = 'Démarrer';
+    display.classList.remove('done', 'warning');
+  }
+
+  function playBeep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      function bip(time, freq) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0, ctx.currentTime + time);
+        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + time + 0.02);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + time + 0.4);
+        osc.start(ctx.currentTime + time);
+        osc.stop(ctx.currentTime + time + 0.4);
+      }
+      bip(0, 880);
+      bip(0.5, 880);
+      bip(1.0, 1100);
+    } catch(e) { /* silence */ }
+  }
+
+  function toggleFullscreen() {
+    document.body.classList.toggle('fullscreen');
+    const btn = document.querySelector('.fullscreen-toggle');
+    btn.textContent = document.body.classList.contains('fullscreen') ? '⛶ Quitter' : '⛶ Plein écran';
+  }
+
+  minutesInput.addEventListener('input', readInputs);
+  secondsInput.addEventListener('input', readInputs);
+
+  // Spacebar = start/pause
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault();
+      toggleTimer();
+    }
+    if (e.code === 'Escape' && document.body.classList.contains('fullscreen')) {
+      toggleFullscreen();
+    }
+  });
+
+  readInputs();
+</script>
+
+</body>
+</html>

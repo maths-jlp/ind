@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tirage aléatoire — jlp Maths Tools</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #fafaf7;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #6b6558;
+    --line: #e5e0d4;
+    --accent: #8b2018;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'EB Garamond', Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+  }
+
+  .top-bar {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .back-link {
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.15s;
+  }
+  .back-link:hover {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  h1 .accent { color: var(--accent); }
+
+  .main {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  /* Affichage */
+  .display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 220px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    line-height: 1;
+    user-select: none;
+    min-height: 220px;
+  }
+  .display.rolling {
+    color: var(--muted);
+    opacity: 0.5;
+  }
+  .display.result {
+    color: var(--accent);
+    animation: appear 0.4s ease-out;
+  }
+  @keyframes appear {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  /* Saisie */
+  .input-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: var(--panel);
+    padding: 14px 20px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .input-group label {
+    font-size: 14px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .input-group input {
+    width: 80px;
+    padding: 8px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg);
+  }
+  .input-group input:focus { outline: none; border-color: var(--accent); }
+  .input-group .sep { color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+  /* Presets */
+  .presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .preset-btn {
+    padding: 8px 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    transition: all 0.15s;
+  }
+  .preset-btn:hover {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+
+  /* Bouton tirage */
+  .btn-tirage {
+    padding: 16px 48px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'EB Garamond', serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: var(--ink);
+    color: var(--bg);
+    transition: all 0.15s;
+  }
+  .btn-tirage:hover { background: var(--accent); transform: translateY(-2px); }
+  .btn-tirage:active { transform: translateY(0); }
+
+  .options {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .options input[type="checkbox"] { cursor: pointer; }
+  .options label { cursor: pointer; }
+
+  /* Historique */
+  .history {
+    width: 100%;
+    max-width: 600px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .history-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .clear-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .clear-btn:hover { color: var(--accent); }
+  .history-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 32px;
+  }
+  .history-item {
+    padding: 4px 10px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .history-empty {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    text-align: center;
+  }
+
+  @media (max-width: 700px) {
+    .display { font-size: 120px; min-height: 120px; }
+    .btn-tirage { font-size: 18px; padding: 12px 32px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>jlp <span class="accent">Maths</span> Tools — Tirage aléatoire</h1>
+  <a href="index.html" class="back-link">← Tableau de bord</a>
+</div>
+
+<div class="main">
+
+  <div class="display" id="display">?</div>
+
+  <div class="input-group">
+    <label>Entre</label>
+    <input type="number" id="min" value="1">
+    <span class="sep">et</span>
+    <input type="number" id="max" value="30">
+    <span class="sep">(inclus)</span>
+  </div>
+
+  <div class="presets">
+    <button class="preset-btn" onclick="setRange(1, 6)">1 → 6</button>
+    <button class="preset-btn" onclick="setRange(1, 10)">1 → 10</button>
+    <button class="preset-btn" onclick="setRange(1, 20)">1 → 20</button>
+    <button class="preset-btn" onclick="setRange(1, 30)">1 → 30</button>
+    <button class="preset-btn" onclick="setRange(1, 35)">1 → 35</button>
+  </div>
+
+  <button class="btn-tirage" onclick="tirage()">Tirer</button>
+
+  <div class="options">
+    <input type="checkbox" id="noRepeat" checked>
+    <label for="noRepeat">Éviter de retirer un nombre déjà sorti</label>
+  </div>
+
+  <div class="history">
+    <div class="history-title">
+      <span>Historique</span>
+      <button class="clear-btn" onclick="clearHistory()">Vider</button>
+    </div>
+    <div class="history-list" id="history">
+      <span class="history-empty">Aucun tirage pour l'instant.</span>
+    </div>
+  </div>
+
+  <div class="hint">Astuce : appuyer sur Espace pour tirer</div>
+
+</div>
+
+<script>
+  const display = document.getElementById('display');
+  const minInput = document.getElementById('min');
+  const maxInput = document.getElementById('max');
+  const noRepeatChk = document.getElementById('noRepeat');
+  const historyDiv = document.getElementById('history');
+  let drawn = [];
+
+  function setRange(a, b) {
+    minInput.value = a;
+    maxInput.value = b;
+  }
+
+  function tirage() {
+    let min = parseInt(minInput.value);
+    let max = parseInt(maxInput.value);
+    if (isNaN(min) || isNaN(max)) {
+      alert('Valeurs invalides');
+      return;
+    }
+    if (min > max) [min, max] = [max, min];
+    const total = max - min + 1;
+
+    let pool;
+    if (noRepeatChk.checked) {
+      pool = [];
+      for (let i = min; i <= max; i++) {
+        if (!drawn.includes(i)) pool.push(i);
+      }
+      if (pool.length === 0) {
+        if (confirm('Tous les nombres ont été tirés. Réinitialiser l\'historique ?')) {
+          drawn = [];
+          renderHistory();
+          tirage();
+        }
+        return;
+      }
+    } else {
+      pool = [];
+      for (let i = min; i <= max; i++) pool.push(i);
+    }
+
+    // Animation : roulement de chiffres aléatoires pendant 800ms
+    display.classList.remove('result');
+    display.classList.add('rolling');
+    const animDuration = 700;
+    const start = Date.now();
+    const interval = setInterval(() => {
+      display.textContent = pool[Math.floor(Math.random() * pool.length)];
+      if (Date.now() - start >= animDuration) {
+        clearInterval(interval);
+        const result = pool[Math.floor(Math.random() * pool.length)];
+        display.textContent = result;
+        display.classList.remove('rolling');
+        display.classList.add('result');
+        drawn.push(result);
+        renderHistory();
+      }
+    }, 60);
+  }
+
+  function renderHistory() {
+    if (drawn.length === 0) {
+      historyDiv.innerHTML = '<span class="history-empty">Aucun tirage pour l\'instant.</span>';
+      return;
+    }
+    historyDiv.innerHTML = drawn
+      .map(n => `<span class="history-item">${n}</span>`)
+      .join('');
+  }
+
+  function clearHistory() {
+    drawn = [];
+    renderHistory();
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault();
+      tirage();
+    }
+  });
+</script>
+
+</body>
+</html>
