@@ -1,11 +1,271 @@
 <!DOCTYPE html>
-   <html lang="fr">
-   <head>
-     <meta charset="UTF-8">
-     <title>Mathsup</title>
-   </head>
-   <body>
-     <h1>Bienvenue sur mathsup</h1>
-     <p>Site en construction.</p>
-   </body>
-   </html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>jlp Maths Tools</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #fafaf7;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #6b6558;
+    --line: #e5e0d4;
+    --accent: #8b2018;
+    --accent-soft: #f4ebe9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'EB Garamond', Georgia, serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  h1 .accent { color: var(--accent); }
+
+  .tagline {
+    font-size: 14px;
+    color: var(--muted);
+    font-style: italic;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .section { margin-bottom: 36px; }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 18px 16px;
+    text-decoration: none;
+    color: var(--ink);
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  }
+  .card.disabled { opacity: 0.45; cursor: not-allowed; }
+  .card.disabled:hover {
+    transform: none;
+    border-color: var(--line);
+    box-shadow: none;
+  }
+  .card-icon { font-size: 20px; margin-bottom: 4px; }
+  .card-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .card-tag {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tab {
+    padding: 10px 22px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'EB Garamond', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .niveau-content { display: none; }
+  .niveau-content.active { display: block; }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 24px; }
+    .container { padding: 20px 16px; }
+    .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card { padding: 14px 12px; }
+    .tab { padding: 8px 14px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <h1>jlp <span class="accent">Maths</span> Tools</h1>
+    <div class="tagline">tableau de bord pédagogique</div>
+  </header>
+
+  <section class="section">
+    <h2>Outils transverses</h2>
+    <div class="grid">
+      <a href="visualiseur-3d.html" class="card">
+        <div class="card-icon">📐</div>
+        <div class="card-title">Visualiseur 3D</div>
+        <div class="card-desc">points · droites · plans</div>
+        <div class="card-tag">v1 · disponible</div>
+      </a>
+      <a href="#" class="card disabled" onclick="alert('Bientôt disponible'); return false;">
+        <div class="card-icon">⏱</div>
+        <div class="card-title">Compte à rebours</div>
+        <div class="card-desc">timer projetable</div>
+        <div class="card-tag">à venir</div>
+      </a>
+      <a href="#" class="card disabled" onclick="alert('Bientôt disponible'); return false;">
+        <div class="card-icon">🎲</div>
+        <div class="card-title">Tirage aléatoire</div>
+        <div class="card-desc">nombre entre N et M</div>
+        <div class="card-tag">à venir</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Mes classes</h2>
+    <div class="tabs">
+      <button class="tab active" onclick="switchNiveau(event, '5e')">5ème</button>
+      <button class="tab" onclick="switchNiveau(event, '1ere')">1ère spé</button>
+      <button class="tab" onclick="switchNiveau(event, 'tle')">Terminale spé</button>
+    </div>
+
+    <div class="niveau-content active" id="niveau-5e">
+      <div class="grid">
+        <div class="card disabled"><div class="card-icon">📚</div><div class="card-title">Manuel numérique</div><div class="card-desc">à configurer</div><div class="card-tag">éditeur ?</div></div>
+        <div class="card disabled"><div class="card-icon">📌</div><div class="card-title">Padlet 5ème</div><div class="card-desc">à configurer</div><div class="card-tag">URL ?</div></div>
+        <div class="card disabled"><div class="card-icon">☁️</div><div class="card-title">OneDrive 5ème</div><div class="card-desc">à configurer</div><div class="card-tag">URL ?</div></div>
+      </div>
+    </div>
+
+    <div class="niveau-content" id="niveau-1ere">
+      <div class="grid">
+        <div class="card disabled"><div class="card-icon">📚</div><div class="card-title">Manuel numérique</div><div class="card-desc">à configurer</div><div class="card-tag">éditeur ?</div></div>
+        <div class="card disabled"><div class="card-icon">📌</div><div class="card-title">Padlet 1ère</div><div class="card-desc">à configurer</div><div class="card-tag">URL ?</div></div>
+        <div class="card disabled"><div class="card-icon">☁️</div><div class="card-title">OneDrive 1ère</div><div class="card-desc">à configurer</div><div class="card-tag">URL ?</div></div>
+      </div>
+    </div>
+
+    <div class="niveau-content" id="niveau-tle">
+      <div class="grid">
+        <div class="card disabled"><div class="card-icon">📚</div><div class="card-title">Manuel numérique</div><div class="card-desc">à configurer</div><div class="card-tag">éditeur ?</div></div>
+        <div class="card disabled"><div class="card-icon">📌</div><div class="card-title">Padlet Tle</div><div class="card-desc">à configurer</div><div class="card-tag">URL ?</div></div>
+        <div class="card disabled"><div class="card-icon">☁️</div><div class="card-title">OneDrive Tle</div><div class="card-desc">à configurer</div><div class="card-tag">URL ?</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Liens externes universels</h2>
+    <div class="grid">
+      <a href="https://www.numworks.com/simulator/" target="_blank" rel="noopener" class="card">
+        <div class="card-icon">🧮</div>
+        <div class="card-title">Numworks</div>
+        <div class="card-desc">émulateur web</div>
+        <div class="card-tag">numworks.com</div>
+      </a>
+      <a href="https://www.geogebra.org/classic" target="_blank" rel="noopener" class="card">
+        <div class="card-icon">📊</div>
+        <div class="card-title">GeoGebra</div>
+        <div class="card-desc">version classique</div>
+        <div class="card-tag">geogebra.org</div>
+      </a>
+      <a href="https://www.youtube.com/@coursdemaths5459" target="_blank" rel="noopener" class="card">
+        <div class="card-icon">▶️</div>
+        <div class="card-title">Cours de maths</div>
+        <div class="card-desc">ma chaîne YouTube</div>
+        <div class="card-tag">youtube.com</div>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    jlp Maths Tools · maths-jlp.github.io/ind
+  </footer>
+</div>
+
+<script>
+  function switchNiveau(evt, niveau) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.niveau-content').forEach(c => c.classList.remove('active'));
+    evt.target.classList.add('active');
+    document.getElementById('niveau-' + niveau).classList.add('active');
+  }
+</script>
+
+</body>
+</html>
