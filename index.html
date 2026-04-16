@@ -23,15 +23,19 @@
     color: var(--ink);
     font-family: 'EB Garamond', Georgia, serif;
     min-height: 100vh;
-    line-height: 1.5;
+    line-height: 1.4;
   }
 
-  .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px 24px;
+  }
 
   header {
     border-bottom: 1px solid var(--line);
-    padding-bottom: 20px;
-    margin-bottom: 28px;
+    padding-bottom: 10px;
+    margin-bottom: 18px;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -39,60 +43,87 @@
     gap: 12px;
   }
 
-  h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+  h1 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
   h1 .accent { color: var(--accent); }
 
   .tagline {
-    font-size: 14px;
+    font-size: 12px;
     color: var(--muted);
     font-style: italic;
     font-family: 'JetBrains Mono', monospace;
   }
 
-  .section { margin-bottom: 36px; }
+  .section { margin-bottom: 18px; }
   h2 {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--accent);
-    margin-bottom: 14px;
-    padding-bottom: 6px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
     border-bottom: 1px solid var(--line);
   }
 
-  .grid {
+  /* Grille 5 colonnes pour outils et liens externes */
+  .grid-5 {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+
+  /* Grille classes (plus flexible) */
+  .grid-classes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
   }
 
   .card {
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 18px 16px;
+    border-radius: 5px;
+    padding: 12px 14px;
     text-decoration: none;
     color: var(--ink);
     transition: all 0.15s ease;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 3px;
     cursor: pointer;
+    min-height: 82px;
   }
   .card:hover {
     border-color: var(--accent);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   }
-  .card-icon { font-size: 20px; margin-bottom: 4px; }
-  .card-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
-  .card-desc { font-size: 13px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
-  .card-tag {
-    font-size: 10px;
+  .card-icon {
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .card-desc {
+    font-size: 11px;
     color: var(--muted);
     font-family: 'JetBrains Mono', monospace;
-    margin-top: 6px;
+    line-height: 1.3;
+  }
+  .card-tag {
+    font-size: 9px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: auto;
+    padding-top: 4px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
@@ -100,16 +131,16 @@
   .tabs {
     display: flex;
     gap: 4px;
-    margin-bottom: 18px;
+    margin-bottom: 10px;
     border-bottom: 1px solid var(--line);
   }
   .tab {
-    padding: 10px 22px;
+    padding: 6px 18px;
     background: none;
     border: none;
     cursor: pointer;
     font-family: 'EB Garamond', serif;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--muted);
     border-bottom: 2px solid transparent;
@@ -123,21 +154,25 @@
   .niveau-content.active { display: block; }
 
   footer {
-    margin-top: 60px;
-    padding-top: 20px;
+    margin-top: 20px;
+    padding-top: 10px;
     border-top: 1px solid var(--line);
     text-align: center;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
     font-family: 'JetBrains Mono', monospace;
   }
 
+  @media (max-width: 900px) {
+    .grid-5 { grid-template-columns: repeat(3, 1fr); }
+  }
   @media (max-width: 600px) {
-    h1 { font-size: 24px; }
-    .container { padding: 20px 16px; }
-    .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-    .card { padding: 14px 12px; }
-    .tab { padding: 8px 14px; font-size: 15px; }
+    h1 { font-size: 20px; }
+    .container { padding: 14px 12px; }
+    .grid-5 { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .card { padding: 10px; min-height: 72px; }
+    .card-title { font-size: 13px; }
+    .tab { padding: 6px 12px; font-size: 14px; }
   }
 </style>
 </head>
@@ -150,42 +185,38 @@
     <div class="tagline">tableau de bord pédagogique</div>
   </header>
 
+  <!-- ============= OUTILS TRANSVERSES ============= -->
   <section class="section">
     <h2>Outils transverses</h2>
-    <div class="grid">
+    <div class="grid-5">
       <a href="visualiseur-3d.html" class="card">
         <div class="card-icon">📐</div>
         <div class="card-title">Visualiseur 3D</div>
         <div class="card-desc">points · droites · plans</div>
-        <div class="card-tag">v1 · disponible</div>
+        <div class="card-tag">v1</div>
       </a>
       <a href="compte-a-rebours.html" class="card">
         <div class="card-icon">⏱</div>
         <div class="card-title">Compte à rebours</div>
         <div class="card-desc">timer projetable</div>
-        <div class="card-tag">v1 · disponible</div>
+        <div class="card-tag">v1</div>
       </a>
       <a href="tirage-aleatoire.html" class="card">
         <div class="card-icon">🎲</div>
         <div class="card-title">Tirage aléatoire</div>
-        <div class="card-desc">nombre entre N et M</div>
-        <div class="card-tag">v1 · disponible</div>
+        <div class="card-desc">nombre N → M</div>
+        <div class="card-tag">v1</div>
       </a>
       <a href="fond-projection.html" class="card">
         <div class="card-icon">🖼</div>
-        <div class="card-title">Fond de projection</div>
+        <div class="card-title">Fond projection</div>
         <div class="card-desc">blanc · repère · lignes</div>
-        <div class="card-tag">v1 · disponible</div>
-      </a>
-      <a href="https://indblrasso-my.sharepoint.com/:f:/r/personal/j_lasserre_indblr_asso_fr/Documents/IND%202026?csf=1&web=1&e=JcbbFA" target="_blank" rel="noopener" class="card">
-        <div class="card-icon">☁️</div>
-        <div class="card-title">IND 2026</div>
-        <div class="card-desc">mon espace de travail</div>
-        <div class="card-tag">onedrive</div>
+        <div class="card-tag">v1</div>
       </a>
     </div>
   </section>
 
+  <!-- ============= MES CLASSES ============= -->
   <section class="section">
     <h2>Mes classes</h2>
     <div class="tabs">
@@ -195,7 +226,7 @@
     </div>
 
     <div class="niveau-content active" id="niveau-5e">
-      <div class="grid">
+      <div class="grid-classes">
         <a href="https://padlet.com/indblr/5-mes2-maths-4nwlla4ac053hzou" target="_blank" rel="noopener" class="card">
           <div class="card-icon">📌</div>
           <div class="card-title">Padlet 5ème</div>
@@ -206,7 +237,7 @@
     </div>
 
     <div class="niveau-content" id="niveau-1ere">
-      <div class="grid">
+      <div class="grid-classes">
         <a href="https://padlet.com/indblr/premi-res-maths-26-mtu3geprfai6tx0h" target="_blank" rel="noopener" class="card">
           <div class="card-icon">📌</div>
           <div class="card-title">Padlet 1ère</div>
@@ -217,7 +248,7 @@
     </div>
 
     <div class="niveau-content" id="niveau-tle">
-      <div class="grid">
+      <div class="grid-classes">
         <a href="https://padlet.com/indblr/terminales-2026-8y7iyzwcjc9sh6yu" target="_blank" rel="noopener" class="card">
           <div class="card-icon">📌</div>
           <div class="card-title">Padlet Terminale</div>
@@ -234,9 +265,10 @@
     </div>
   </section>
 
+  <!-- ============= LIENS EXTERNES ============= -->
   <section class="section">
-    <h2>Liens externes universels</h2>
-    <div class="grid">
+    <h2>Liens externes</h2>
+    <div class="grid-5">
       <a href="https://www.numworks.com/simulator/" target="_blank" rel="noopener" class="card">
         <div class="card-icon">🧮</div>
         <div class="card-title">Numworks</div>
@@ -246,13 +278,13 @@
       <a href="https://www.geogebra.org/classic" target="_blank" rel="noopener" class="card">
         <div class="card-icon">📊</div>
         <div class="card-title">GeoGebra</div>
-        <div class="card-desc">version classique</div>
+        <div class="card-desc">classique</div>
         <div class="card-tag">geogebra.org</div>
       </a>
       <a href="https://www.youtube.com/@coursdemaths5459" target="_blank" rel="noopener" class="card">
         <div class="card-icon">▶️</div>
         <div class="card-title">Cours de maths</div>
-        <div class="card-desc">ma chaîne YouTube</div>
+        <div class="card-desc">chaîne YouTube</div>
         <div class="card-tag">youtube.com</div>
       </a>
       <a href="https://www.ecoledirecte.com/CahierDeTexte" target="_blank" rel="noopener" class="card">
@@ -260,6 +292,12 @@
         <div class="card-title">EcoleDirecte</div>
         <div class="card-desc">cahier de textes</div>
         <div class="card-tag">ecoledirecte.com</div>
+      </a>
+      <a href="https://indblrasso-my.sharepoint.com/:f:/r/personal/j_lasserre_indblr_asso_fr/Documents/IND%202026?csf=1&web=1&e=JcbbFA" target="_blank" rel="noopener" class="card">
+        <div class="card-icon">☁️</div>
+        <div class="card-title">IND 2026</div>
+        <div class="card-desc">mon OneDrive</div>
+        <div class="card-tag">onedrive</div>
       </a>
     </div>
   </section>
