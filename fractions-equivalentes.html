@@ -15,76 +15,66 @@
     --line: #e5e0d4;
     --accent: #8b2018;
     --fill: #c85a3f;
-    --fill-light: #f4c8b8;
     --stroke: #1a1a1a;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html, body {
+    height: 100vh;
+    overflow: hidden;
+  }
+
   body {
     background: var(--bg);
     color: var(--ink);
     font-family: 'EB Garamond', Georgia, serif;
-    min-height: 100vh;
-    line-height: 1.4;
-    padding: 20px 24px;
+    line-height: 1.3;
+    padding: 12px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
+  /* === TOP BAR === */
   .top-bar {
-    max-width: 1200px;
-    margin: 0 auto 20px;
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
-    padding-bottom: 12px;
+    align-items: center;
+    padding-bottom: 6px;
     border-bottom: 1px solid var(--line);
-    flex-wrap: wrap;
-    gap: 12px;
+    flex-shrink: 0;
   }
   .back-link {
-    padding: 6px 12px;
+    padding: 4px 10px;
     border: 1px solid var(--line);
     border-radius: 4px;
     color: var(--muted);
     text-decoration: none;
-    font-size: 12px;
+    font-size: 11px;
     font-family: 'JetBrains Mono', monospace;
     transition: all 0.15s;
   }
-  .back-link:hover {
-    background: var(--ink);
-    color: var(--bg);
-    border-color: var(--ink);
-  }
-  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .back-link:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
   h1 .accent { color: var(--accent); }
 
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  /* === Controls === */
+  /* === CONTROLS === */
   .controls {
     display: flex;
-    gap: 24px;
+    gap: 16px;
     align-items: center;
     flex-wrap: wrap;
     background: var(--panel);
-    padding: 16px 20px;
+    padding: 10px 14px;
     border: 1px solid var(--line);
-    border-radius: 8px;
-    margin-bottom: 24px;
+    border-radius: 6px;
+    flex-shrink: 0;
   }
-
-  .fraction-input {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  .fraction-input { display: flex; align-items: center; gap: 8px; }
   .fraction-input label {
     font-family: 'EB Garamond', serif;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--muted);
   }
@@ -92,66 +82,55 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 1px;
   }
   .fraction-stack input {
-    width: 70px;
-    padding: 6px 8px;
+    width: 56px;
+    padding: 3px 6px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 600;
     text-align: center;
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: 3px;
     background: var(--bg);
     color: var(--ink);
   }
   .fraction-stack input:focus { outline: none; border-color: var(--accent); }
-  .fraction-stack .bar {
-    width: 60px;
-    height: 2px;
-    background: var(--ink);
-  }
+  .fraction-stack .bar { width: 50px; height: 2px; background: var(--ink); }
 
   .form-toggle {
     display: flex;
-    gap: 4px;
-    padding: 3px;
+    gap: 3px;
+    padding: 2px;
     background: var(--bg);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: 5px;
   }
   .form-btn {
-    padding: 6px 16px;
+    padding: 4px 12px;
     background: transparent;
     border: none;
-    border-radius: 4px;
+    border-radius: 3px;
     cursor: pointer;
     font-family: 'EB Garamond', serif;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--muted);
     transition: all 0.15s;
   }
-  .form-btn.active {
-    background: var(--ink);
-    color: var(--bg);
-  }
+  .form-btn.active { background: var(--ink); color: var(--bg); }
   .form-btn:hover:not(.active) { color: var(--ink); }
 
-  .presets {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
+  .presets { display: flex; gap: 4px; flex-wrap: wrap; }
   .preset-btn {
-    padding: 5px 12px;
+    padding: 3px 10px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: 3px;
     cursor: pointer;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--ink);
   }
   .preset-btn:hover {
@@ -160,106 +139,105 @@
     border-color: var(--accent);
   }
 
-  /* === Figure principale === */
+  .irr-status {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .irr-status.is-irr { color: #166534; font-weight: 700; }
+  .irr-status strong { color: var(--accent); font-size: 14px; }
+
+  /* === MAIN CONTENT === */
+  .main {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 14px;
+  }
+
   .main-figure {
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 24px;
-    margin-bottom: 20px;
+    border-radius: 6px;
+    padding: 10px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 28px;
-    flex-wrap: wrap;
     justify-content: center;
+    gap: 6px;
   }
   .main-figure svg {
-    max-width: 280px;
-    max-height: 280px;
     width: 100%;
     height: auto;
-  }
-  .main-info {
+    max-height: calc(100% - 40px);
     flex: 1;
-    min-width: 220px;
+    min-height: 0;
   }
-  .main-info .big-fraction {
+  .main-figure .label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 64px;
+    font-size: 22px;
     font-weight: 700;
     color: var(--accent);
-    line-height: 1;
-    margin-bottom: 8px;
-  }
-  .main-info .big-fraction .num,
-  .main-info .big-fraction .den {
-    display: block;
-    text-align: center;
-    width: fit-content;
-  }
-  .main-info .frac-vertical {
     display: inline-block;
     text-align: center;
     line-height: 1;
   }
-  .main-info .frac-vertical .top {
-    border-bottom: 4px solid var(--accent);
-    padding: 0 8px 2px;
+  .main-figure .label .top {
+    border-bottom: 3px solid var(--accent);
+    padding: 0 6px 1px;
+    display: block;
   }
-  .main-info .frac-vertical .bot {
-    padding: 2px 8px 0;
-  }
-  .main-info .irreducible {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .main-info .irreducible.is-irr {
-    color: #166534;
-    font-weight: 600;
+  .main-figure .label .bot {
+    padding: 1px 6px 0;
+    display: block;
   }
 
-  /* === Grille équivalentes === */
-  h2 {
-    font-size: 13px;
+  .equiv-section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .equiv-title {
+    font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--accent);
-    margin-bottom: 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
+    flex-shrink: 0;
   }
-
   .equiv-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    align-content: start;
   }
 
   .equiv-card {
-    background: var(--panel);
+    background: var(--bg);
     border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 14px 10px;
+    border-radius: 4px;
+    padding: 6px 4px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
   }
   .equiv-card svg {
     width: 100%;
-    height: 110px;
-    max-width: 130px;
-  }
-  .equiv-card .label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--ink);
+    height: 64px;
+    max-width: 80px;
   }
   .equiv-card .frac-inline {
     display: inline-block;
@@ -267,89 +245,89 @@
     line-height: 1;
   }
   .equiv-card .frac-inline .top {
-    border-bottom: 2px solid var(--ink);
-    padding: 0 4px 1px;
-    font-size: 18px;
+    border-bottom: 1.5px solid var(--ink);
+    padding: 0 3px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
   }
   .equiv-card .frac-inline .bot {
-    padding: 1px 4px 0;
-    font-size: 18px;
+    padding: 0 3px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
   }
   .equiv-card.is-main {
     border-color: var(--accent);
     background: #fff8f6;
+    border-width: 2px;
   }
   .equiv-card.is-main .frac-inline .top { border-bottom-color: var(--accent); }
 
-  @media (max-width: 600px) {
-    .controls { gap: 14px; padding: 12px; }
-    .main-figure { padding: 16px; gap: 16px; }
-    .main-info .big-fraction { font-size: 48px; }
+  @media (max-width: 700px) {
+    .main { grid-template-columns: 1fr; }
+    .main-figure { max-height: 180px; }
   }
 </style>
 </head>
 <body>
 
+<!-- TOP BAR -->
 <div class="top-bar">
   <h1>jlp <span class="accent">Maths</span> Tools — Fractions équivalentes</h1>
   <a href="index.html" class="back-link">← Tableau de bord</a>
 </div>
 
-<div class="container">
-
-  <!-- Contrôles -->
-  <div class="controls">
-
-    <div class="fraction-input">
-      <label>Fraction :</label>
-      <div class="fraction-stack">
-        <input type="number" id="num" value="1" min="0" max="20">
-        <div class="bar"></div>
-        <input type="number" id="den" value="2" min="1" max="20">
-      </div>
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="fraction-input">
+    <label>Fraction :</label>
+    <div class="fraction-stack">
+      <input type="number" id="num" value="1" min="0" max="20">
+      <div class="bar"></div>
+      <input type="number" id="den" value="2" min="1" max="20">
     </div>
-
-    <div class="form-toggle">
-      <button class="form-btn active" data-form="disc">Disque</button>
-      <button class="form-btn" data-form="bar">Barre</button>
-      <button class="form-btn" data-form="square">Carré</button>
-    </div>
-
-    <div class="presets">
-      <button class="preset-btn" onclick="setFraction(1,2)">1/2</button>
-      <button class="preset-btn" onclick="setFraction(1,3)">1/3</button>
-      <button class="preset-btn" onclick="setFraction(2,3)">2/3</button>
-      <button class="preset-btn" onclick="setFraction(1,4)">1/4</button>
-      <button class="preset-btn" onclick="setFraction(3,4)">3/4</button>
-      <button class="preset-btn" onclick="setFraction(2,5)">2/5</button>
-      <button class="preset-btn" onclick="setFraction(3,6)">3/6</button>
-      <button class="preset-btn" onclick="setFraction(4,8)">4/8</button>
-    </div>
-
   </div>
 
-  <!-- Figure principale -->
+  <div class="form-toggle">
+    <button class="form-btn active" data-form="disc">Disque</button>
+    <button class="form-btn" data-form="bar">Barre</button>
+    <button class="form-btn" data-form="square">Carré</button>
+  </div>
+
+  <div class="presets">
+    <button class="preset-btn" onclick="setFraction(1,2)">1/2</button>
+    <button class="preset-btn" onclick="setFraction(1,3)">1/3</button>
+    <button class="preset-btn" onclick="setFraction(2,3)">2/3</button>
+    <button class="preset-btn" onclick="setFraction(1,4)">1/4</button>
+    <button class="preset-btn" onclick="setFraction(3,4)">3/4</button>
+    <button class="preset-btn" onclick="setFraction(2,5)">2/5</button>
+    <button class="preset-btn" onclick="setFraction(3,6)">3/6</button>
+    <button class="preset-btn" onclick="setFraction(4,8)">4/8</button>
+  </div>
+
+  <div class="irr-status" id="irr-status"></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- Figure principale compacte -->
   <div class="main-figure">
-    <div id="main-svg-container"></div>
-    <div class="main-info">
-      <div class="big-fraction">
-        <span class="frac-vertical">
-          <div class="top" id="display-num">1</div>
-          <div class="bot" id="display-den">2</div>
-        </span>
-      </div>
-      <div class="irreducible" id="irr-status"></div>
+    <div id="main-svg-container" style="flex:1; display:flex; align-items:center; justify-content:center; width:100%; min-height:0;"></div>
+    <div class="label">
+      <span class="top" id="display-num">1</span>
+      <span class="bot" id="display-den">2</span>
     </div>
   </div>
 
-  <!-- Fractions équivalentes -->
-  <h2>Fractions équivalentes</h2>
-  <div class="equiv-grid" id="equiv-grid"></div>
-
+  <!-- Équivalentes -->
+  <div class="equiv-section">
+    <div class="equiv-title">Fractions équivalentes</div>
+    <div class="equiv-grid" id="equiv-grid"></div>
+  </div>
 </div>
 
 <script>
-  // === État ===
   let num = 1, den = 2;
   let currentForm = 'disc';
 
@@ -358,31 +336,23 @@
   const mainContainer = document.getElementById('main-svg-container');
   const equivGrid = document.getElementById('equiv-grid');
 
-  // === Utilitaires ===
   function gcd(a, b) {
     a = Math.abs(a); b = Math.abs(b);
     while (b) { [a, b] = [b, a % b]; }
     return a || 1;
   }
-
   function reduce(n, d) {
     const g = gcd(n, d);
     return [n / g, d / g];
   }
 
-  // === Dessin d'un disque ===
-  function drawDisc(filled, total, size = 240) {
+  function drawDisc(filled, total, size = 200) {
     const cx = size / 2, cy = size / 2;
-    const r = size / 2 - 8;
-
+    const r = size / 2 - 6;
     if (total === 1) {
-      // Cas particulier
       const fill = filled === 1 ? 'var(--fill)' : 'var(--panel)';
-      return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="var(--stroke)" stroke-width="2"/>
-      </svg>`;
+      return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="var(--stroke)" stroke-width="2"/></svg>`;
     }
-
     let paths = '';
     for (let i = 0; i < total; i++) {
       const a1 = (i / total) * 2 * Math.PI - Math.PI / 2;
@@ -396,12 +366,11 @@
       const fill = i < filled ? 'var(--fill)' : 'var(--panel)';
       paths += `<path d="${d}" fill="${fill}" stroke="var(--stroke)" stroke-width="1.5"/>`;
     }
-    return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
+    return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">${paths}</svg>`;
   }
 
-  // === Dessin d'une barre ===
-  function drawBar(filled, total, size = 240) {
-    const w = size, h = size * 0.45;
+  function drawBar(filled, total, size = 200) {
+    const w = size, h = size * 0.4;
     const partW = (w - 4) / total;
     let rects = '';
     for (let i = 0; i < total; i++) {
@@ -409,81 +378,65 @@
       const fill = i < filled ? 'var(--fill)' : 'var(--panel)';
       rects += `<rect x="${x}" y="${(size - h) / 2}" width="${partW}" height="${h}" fill="${fill}" stroke="var(--stroke)" stroke-width="1.5"/>`;
     }
-    return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+    return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">${rects}</svg>`;
   }
 
-  // === Dessin d'un carré avec grille ===
-  function drawSquare(filled, total, size = 240) {
-    // Trouver la meilleure découpe en grille (lignes × colonnes = total)
-    // On cherche les diviseurs les plus proches de sqrt(total)
+  function drawSquare(filled, total, size = 200) {
     const s = Math.sqrt(total);
     let cols = Math.round(s);
-    // Ajuster pour que cols divise total
     while (cols > 1 && total % cols !== 0) cols--;
     if (cols < 1) cols = 1;
     const rows = total / cols;
-    // Si ça ne tombe pas juste, fallback : une seule ligne
-    if (!Number.isInteger(rows)) {
-      return drawBar(filled, total, size);
-    }
-
-    const sq = size - 8;
+    if (!Number.isInteger(rows)) return drawBar(filled, total, size);
+    const sq = size - 6;
     const cellW = sq / cols;
     const cellH = sq / rows;
     let rects = '';
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
-        const x = 4 + c * cellW;
-        const y = 4 + r * cellH;
+        const x = 3 + c * cellW;
+        const y = 3 + r * cellH;
         const fill = idx < filled ? 'var(--fill)' : 'var(--panel)';
         rects += `<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" fill="${fill}" stroke="var(--stroke)" stroke-width="1.5"/>`;
       }
     }
-    return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+    return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">${rects}</svg>`;
   }
 
-  function drawShape(filled, total, size = 240) {
+  function drawShape(filled, total, size = 200) {
     if (currentForm === 'disc') return drawDisc(filled, total, size);
     if (currentForm === 'bar') return drawBar(filled, total, size);
     if (currentForm === 'square') return drawSquare(filled, total, size);
   }
 
-  // === Rendu ===
   function render() {
-    // Valider
     num = Math.max(0, Math.min(20, parseInt(numInput.value) || 0));
     den = Math.max(1, Math.min(20, parseInt(denInput.value) || 1));
-    if (num > den) num = den; // éviter fractions > 1 pour l'affichage visuel
-
-    // Mise à jour des inputs (en cas de clamp)
+    if (num > den) num = den;
     numInput.value = num;
     denInput.value = den;
 
-    // Affichage fraction principale
     document.getElementById('display-num').textContent = num;
     document.getElementById('display-den').textContent = den;
 
-    // Figure principale
-    mainContainer.innerHTML = drawShape(num, den, 260);
+    mainContainer.innerHTML = drawShape(num, den, 200);
 
-    // Statut irréductible
     const [rn, rd] = reduce(num, den);
     const irrStatus = document.getElementById('irr-status');
     if (num === 0) {
       irrStatus.textContent = 'Fraction nulle';
-      irrStatus.className = 'irreducible';
+      irrStatus.className = 'irr-status';
     } else if (rn === num && rd === den) {
-      irrStatus.textContent = '✓ Fraction irréductible';
-      irrStatus.className = 'irreducible is-irr';
+      irrStatus.textContent = '✓ Irréductible';
+      irrStatus.className = 'irr-status is-irr';
     } else {
-      irrStatus.innerHTML = `Forme irréductible : <strong>${rn}/${rd}</strong>`;
-      irrStatus.className = 'irreducible';
+      irrStatus.innerHTML = `Irréductible : <strong>${rn}/${rd}</strong>`;
+      irrStatus.className = 'irr-status';
     }
 
-    // Fractions équivalentes (multiples entiers de la forme irréductible)
     equivGrid.innerHTML = '';
-    const maxDen = 24;
+    const maxDen = 20;
     for (let k = 1; k * rd <= maxDen; k++) {
       const n = rn * k;
       const d = rd * k;
@@ -491,7 +444,7 @@
       const card = document.createElement('div');
       card.className = 'equiv-card' + (isMain ? ' is-main' : '');
       card.innerHTML = `
-        ${drawShape(n, d, 120)}
+        ${drawShape(n, d, 80)}
         <div class="frac-inline">
           <div class="top">${n}</div>
           <div class="bot">${d}</div>
@@ -501,7 +454,6 @@
     }
   }
 
-  // === Handlers ===
   function setFraction(n, d) {
     numInput.value = n;
     denInput.value = d;
@@ -520,7 +472,6 @@
     });
   });
 
-  // Init
   render();
 </script>
 
