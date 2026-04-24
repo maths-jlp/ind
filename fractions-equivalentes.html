@@ -30,10 +30,10 @@
     color: var(--ink);
     font-family: 'EB Garamond', Georgia, serif;
     line-height: 1.3;
-    padding: 12px 18px;
+    padding: 10px 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
   }
 
   /* === TOP BAR === */
@@ -41,8 +41,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--line);
     flex-shrink: 0;
   }
   .back-link {
@@ -56,24 +54,23 @@
     transition: all 0.15s;
   }
   .back-link:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-  h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  h1 { font-size: 18px; font-weight: 700; }
   h1 .accent { color: var(--accent); }
 
   /* === CONTROLS === */
   .controls {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     align-items: center;
     flex-wrap: wrap;
     background: var(--panel);
-    padding: 10px 14px;
+    padding: 8px 12px;
     border: 1px solid var(--line);
     border-radius: 6px;
     flex-shrink: 0;
   }
-  .fraction-input { display: flex; align-items: center; gap: 8px; }
+  .fraction-input { display: flex; align-items: center; gap: 6px; }
   .fraction-input label {
-    font-family: 'EB Garamond', serif;
     font-size: 14px;
     font-weight: 600;
     color: var(--muted);
@@ -85,8 +82,8 @@
     gap: 1px;
   }
   .fraction-stack input {
-    width: 56px;
-    padding: 3px 6px;
+    width: 52px;
+    padding: 3px 5px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 18px;
     font-weight: 600;
@@ -97,7 +94,7 @@
     color: var(--ink);
   }
   .fraction-stack input:focus { outline: none; border-color: var(--accent); }
-  .fraction-stack .bar { width: 50px; height: 2px; background: var(--ink); }
+  .fraction-stack .bar { width: 46px; height: 2px; background: var(--ink); }
 
   .form-toggle {
     display: flex;
@@ -108,7 +105,7 @@
     border-radius: 5px;
   }
   .form-btn {
-    padding: 4px 12px;
+    padding: 4px 11px;
     background: transparent;
     border: none;
     border-radius: 3px;
@@ -124,7 +121,7 @@
 
   .presets { display: flex; gap: 4px; flex-wrap: wrap; }
   .preset-btn {
-    padding: 3px 10px;
+    padding: 3px 9px;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 3px;
@@ -133,11 +130,7 @@
     font-size: 12px;
     color: var(--ink);
   }
-  .preset-btn:hover {
-    background: var(--accent);
-    color: var(--panel);
-    border-color: var(--accent);
-  }
+  .preset-btn:hover { background: var(--accent); color: var(--panel); border-color: var(--accent); }
 
   .irr-status {
     margin-left: auto;
@@ -150,142 +143,109 @@
   .irr-status.is-irr { color: #166534; font-weight: 700; }
   .irr-status strong { color: var(--accent); font-size: 14px; }
 
-  /* === MAIN CONTENT === */
+  /* === MAIN GRID 3x3 === */
   .main {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 220px 1fr;
-    gap: 14px;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 8px;
   }
 
-  .main-figure {
+  .equiv-card {
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 6px;
-    padding: 10px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 6px;
-  }
-  .main-figure svg {
-    width: 100%;
-    height: auto;
-    max-height: calc(100% - 40px);
-    flex: 1;
-    min-height: 0;
-  }
-  .main-figure .label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--accent);
-    display: inline-block;
-    text-align: center;
-    line-height: 1;
-  }
-  .main-figure .label .top {
-    border-bottom: 3px solid var(--accent);
-    padding: 0 6px 1px;
-    display: block;
-  }
-  .main-figure .label .bot {
-    padding: 1px 6px 0;
-    display: block;
-  }
-
-  .equiv-section {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  .equiv-title {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-    margin-bottom: 8px;
-    flex-shrink: 0;
-  }
-  .equiv-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 8px;
-    flex: 1;
-    min-height: 0;
     overflow: hidden;
-    align-content: start;
-  }
-
-  .equiv-card {
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 6px 4px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
   }
   .equiv-card svg {
+    flex: 1;
     width: 100%;
-    height: 64px;
-    max-width: 80px;
+    min-height: 0;
   }
   .equiv-card .frac-inline {
     display: inline-block;
     text-align: center;
     line-height: 1;
+    flex-shrink: 0;
   }
   .equiv-card .frac-inline .top {
-    border-bottom: 1.5px solid var(--ink);
-    padding: 0 3px;
-    font-size: 13px;
-    font-weight: 600;
+    border-bottom: 2.5px solid var(--ink);
+    padding: 0 6px 1px;
+    font-size: 22px;
+    font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
   }
   .equiv-card .frac-inline .bot {
-    padding: 0 3px;
-    font-size: 13px;
-    font-weight: 600;
+    padding: 1px 6px 0;
+    font-size: 22px;
+    font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
   }
   .equiv-card.is-main {
-    border-color: var(--accent);
-    background: #fff8f6;
-    border-width: 2px;
+    border: 3px solid var(--accent);
+    background: #fff5f2;
   }
-  .equiv-card.is-main .frac-inline .top { border-bottom-color: var(--accent); }
-
-  @media (max-width: 700px) {
-    .main { grid-template-columns: 1fr; }
-    .main-figure { max-height: 180px; }
+  .equiv-card.is-main .frac-inline .top {
+    border-bottom-color: var(--accent);
+    color: var(--accent);
+  }
+  .equiv-card.is-main .frac-inline .bot {
+    color: var(--accent);
+  }
+  .equiv-card.is-irr {
+    border: 2px solid #166534;
+    background: #f2f9f5;
+  }
+  .equiv-card.is-irr .frac-inline .top {
+    border-bottom-color: #166534;
+    color: #166534;
+  }
+  .equiv-card.is-irr .frac-inline .bot {
+    color: #166534;
+  }
+  .equiv-card.is-main.is-irr {
+    border-color: var(--accent);
+    background: #fff5f2;
+  }
+  .equiv-card.is-main.is-irr .frac-inline .top {
+    border-bottom-color: var(--accent);
+    color: var(--accent);
+  }
+  .equiv-card.is-main.is-irr .frac-inline .bot {
+    color: var(--accent);
+  }
+  .equiv-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
   }
 </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
 <div class="top-bar">
   <h1>jlp <span class="accent">Maths</span> Tools — Fractions équivalentes</h1>
   <a href="index.html" class="back-link">← Tableau de bord</a>
 </div>
 
-<!-- CONTROLS -->
 <div class="controls">
   <div class="fraction-input">
     <label>Fraction :</label>
     <div class="fraction-stack">
-      <input type="number" id="num" value="1" min="0" max="20">
+      <input type="number" id="num" value="2" min="0" max="20">
       <div class="bar"></div>
-      <input type="number" id="den" value="2" min="1" max="20">
+      <input type="number" id="den" value="4" min="1" max="20">
     </div>
   </div>
 
@@ -309,32 +269,15 @@
   <div class="irr-status" id="irr-status"></div>
 </div>
 
-<!-- MAIN -->
-<div class="main">
-  <!-- Figure principale compacte -->
-  <div class="main-figure">
-    <div id="main-svg-container" style="flex:1; display:flex; align-items:center; justify-content:center; width:100%; min-height:0;"></div>
-    <div class="label">
-      <span class="top" id="display-num">1</span>
-      <span class="bot" id="display-den">2</span>
-    </div>
-  </div>
-
-  <!-- Équivalentes -->
-  <div class="equiv-section">
-    <div class="equiv-title">Fractions équivalentes</div>
-    <div class="equiv-grid" id="equiv-grid"></div>
-  </div>
-</div>
+<div class="main" id="main-grid"></div>
 
 <script>
-  let num = 1, den = 2;
+  let num = 2, den = 4;
   let currentForm = 'disc';
 
   const numInput = document.getElementById('num');
   const denInput = document.getElementById('den');
-  const mainContainer = document.getElementById('main-svg-container');
-  const equivGrid = document.getElementById('equiv-grid');
+  const mainGrid = document.getElementById('main-grid');
 
   function gcd(a, b) {
     a = Math.abs(a); b = Math.abs(b);
@@ -347,8 +290,7 @@
   }
 
   function drawDisc(filled, total, size = 200) {
-    const cx = size / 2, cy = size / 2;
-    const r = size / 2 - 6;
+    const cx = size / 2, cy = size / 2, r = size / 2 - 6;
     if (total === 1) {
       const fill = filled === 1 ? 'var(--fill)' : 'var(--panel)';
       return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="var(--stroke)" stroke-width="2"/></svg>`;
@@ -357,12 +299,10 @@
     for (let i = 0; i < total; i++) {
       const a1 = (i / total) * 2 * Math.PI - Math.PI / 2;
       const a2 = ((i + 1) / total) * 2 * Math.PI - Math.PI / 2;
-      const x1 = cx + r * Math.cos(a1);
-      const y1 = cy + r * Math.sin(a1);
-      const x2 = cx + r * Math.cos(a2);
-      const y2 = cy + r * Math.sin(a2);
-      const largeArc = (a2 - a1) > Math.PI ? 1 : 0;
-      const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+      const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+      const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+      const la = (a2 - a1) > Math.PI ? 1 : 0;
+      const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${la} 1 ${x2} ${y2} Z`;
       const fill = i < filled ? 'var(--fill)' : 'var(--panel)';
       paths += `<path d="${d}" fill="${fill}" stroke="var(--stroke)" stroke-width="1.5"/>`;
     }
@@ -370,8 +310,7 @@
   }
 
   function drawBar(filled, total, size = 200) {
-    const w = size, h = size * 0.4;
-    const partW = (w - 4) / total;
+    const w = size, h = size * 0.4, partW = (w - 4) / total;
     let rects = '';
     for (let i = 0; i < total; i++) {
       const x = 2 + i * partW;
@@ -388,15 +327,12 @@
     if (cols < 1) cols = 1;
     const rows = total / cols;
     if (!Number.isInteger(rows)) return drawBar(filled, total, size);
-    const sq = size - 6;
-    const cellW = sq / cols;
-    const cellH = sq / rows;
+    const sq = size - 6, cellW = sq / cols, cellH = sq / rows;
     let rects = '';
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
-        const x = 3 + c * cellW;
-        const y = 3 + r * cellH;
+        const x = 3 + c * cellW, y = 3 + r * cellH;
         const fill = idx < filled ? 'var(--fill)' : 'var(--panel)';
         rects += `<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" fill="${fill}" stroke="var(--stroke)" stroke-width="1.5"/>`;
       }
@@ -417,12 +353,9 @@
     numInput.value = num;
     denInput.value = den;
 
-    document.getElementById('display-num').textContent = num;
-    document.getElementById('display-den').textContent = den;
-
-    mainContainer.innerHTML = drawShape(num, den, 200);
-
     const [rn, rd] = reduce(num, den);
+
+    // Status
     const irrStatus = document.getElementById('irr-status');
     if (num === 0) {
       irrStatus.textContent = 'Fraction nulle';
@@ -435,22 +368,44 @@
       irrStatus.className = 'irr-status';
     }
 
-    equivGrid.innerHTML = '';
-    const maxDen = 20;
-    for (let k = 1; k * rd <= maxDen; k++) {
-      const n = rn * k;
-      const d = rd * k;
-      const isMain = (n === num && d === den);
+    // Build exactly 9 equivalent fractions
+    // Start from k=1 (irreducible) up to k=9
+    const fractions = [];
+    for (let k = 1; fractions.length < 9; k++) {
+      const n = rn * k, d = rd * k;
+      if (d > 100) break; // safety
+      fractions.push({ n, d, k });
+    }
+    // If we don't have 9 (unlikely but possible with very large denominators), pad
+    while (fractions.length < 9) {
+      const k = fractions.length + 1;
+      fractions.push({ n: rn * k, d: rd * k, k });
+    }
+
+    // Render grid
+    mainGrid.innerHTML = '';
+    for (const f of fractions) {
+      const isMain = (f.n === num && f.d === den);
+      const isIrr = (f.n === rn && f.d === rd && !(rn === num && rd === den));
       const card = document.createElement('div');
-      card.className = 'equiv-card' + (isMain ? ' is-main' : '');
+      let cls = 'equiv-card';
+      if (isMain) cls += ' is-main';
+      if (f.n === rn && f.d === rd && !isMain) cls += ' is-irr';
+      card.className = cls;
+
+      let labelText = '';
+      if (isMain) labelText = '← ta fraction';
+      else if (f.n === rn && f.d === rd) labelText = '← irréductible';
+
       card.innerHTML = `
-        ${drawShape(n, d, 80)}
+        ${drawShape(f.n, f.d, 200)}
         <div class="frac-inline">
-          <div class="top">${n}</div>
-          <div class="bot">${d}</div>
+          <div class="top">${f.n}</div>
+          <div class="bot">${f.d}</div>
         </div>
+        ${labelText ? `<div class="equiv-label">${labelText}</div>` : ''}
       `;
-      equivGrid.appendChild(card);
+      mainGrid.appendChild(card);
     }
   }
 
