@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Visualiseur de géométrie dans l'espace — V2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root { --bg:#f5f2ea;--ink:#1a1a1a;--muted:#6b6558;--accent:#8b2018;--line:#d4cfc0;--panel:#ebe6d8; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'EB Garamond',Georgia,serif;height:100vh;overflow:hidden;display:grid;grid-template-columns:340px 1fr}
+  aside{background:var(--panel);border-right:1px solid var(--line);padding:14px;overflow-y:auto}
+  h1{font-size:18px;font-weight:600;margin-bottom:2px}
+  .subtitle{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:14px}
+  .section{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .section:last-child{border-bottom:none}
+  h2{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:8px}
+  .tabs{display:flex;gap:2px;margin-bottom:8px;background:var(--bg);padding:2px;border-radius:4px}
+  .tab{flex:1;padding:4px 6px;font-size:10px;font-family:'JetBrains Mono',monospace;background:transparent;border:none;cursor:pointer;border-radius:3px;color:var(--muted);transition:all .15s}
+  .tab.active{background:var(--ink);color:var(--bg)}
+  label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-family:'JetBrains Mono',monospace}
+  .coord-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:6px}
+  .coord-row-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:6px}
+  input[type="text"],input[type="number"]{width:100%;padding:4px 6px;border:1px solid var(--line);background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink);border-radius:3px}
+  input:focus{outline:none;border-color:var(--accent)}
+  button.add{width:100%;padding:6px;background:var(--ink);color:var(--bg);border:none;cursor:pointer;font-family:'EB Garamond',serif;font-size:13px;font-weight:600;border-radius:3px;margin-top:4px;transition:background .15s}
+  button.add:hover{background:var(--accent)}
+  .object-list{margin-top:6px}
+  .obj-item{display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--bg);border-radius:3px;margin-bottom:3px;font-family:'JetBrains Mono',monospace;font-size:10px}
+  .obj-color{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .obj-label{flex:1;color:var(--ink)}
+  .obj-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 3px}
+  .obj-del:hover{color:var(--accent)}
+  .equation-mode{display:flex;gap:3px;margin-bottom:6px}
+  .eq-btn{flex:1;padding:3px;font-size:9px;font-family:'JetBrains Mono',monospace;background:var(--bg);border:1px solid var(--line);cursor:pointer;border-radius:3px;color:var(--muted)}
+  .eq-btn.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  main{position:relative;overflow:hidden}
+  #canvas{display:block;width:100%;height:100%}
+  .toolbar{position:absolute;top:12px;right:12px;display:flex;gap:4px;background:var(--panel);padding:4px;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.08);flex-wrap:wrap;max-width:420px}
+  .tool-btn{padding:4px 8px;background:var(--bg);border:1px solid var(--line);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;border-radius:3px;color:var(--ink)}
+  .tool-btn:hover{background:var(--ink);color:var(--bg)}
+  .tool-btn.active{background:var(--ink);color:var(--bg)}
+  .info{position:absolute;bottom:12px;left:12px;background:var(--panel);padding:8px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);max-width:340px}
+  .hint{font-size:10px;color:var(--muted);margin-top:3px;font-style:italic}
+  .back-link{display:block;margin-bottom:10px;padding:4px 8px;background:var(--bg);border:1px solid var(--line);border-radius:4px;color:var(--muted);text-decoration:none;font-size:11px;font-family:'JetBrains Mono',monospace;text-align:center;transition:all .15s}
+  .back-link:hover{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .results-box{margin-top:6px;padding:6px;background:var(--bg);border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink);border:1px solid var(--line)}
+  .results-box strong{color:var(--accent)}
+</style>
+</head>
+<body>
+<aside>
+  <a href="index.html" class="back-link">← Retour au tableau de bord</a>
+  <h1>Géométrie dans l'espace</h1>
+  <div class="subtitle">Visualiseur 3D V2 — repère orthonormé</div>
+
+  <div class="section">
+    <h2>Ajouter un objet</h2>
+    <div class="tabs">
+      <button class="tab active" data-tab="point">Point</button>
+      <button class="tab" data-tab="droite">Droite</button>
+      <button class="tab" data-tab="plan">Plan</button>
+      <button class="tab" data-tab="sphere">Sphère</button>
+    </div>
+
+    <!-- POINT -->
+    <div class="panel" id="panel-point">
+      <label>Nom</label>
+      <input type="text" id="pt-name" value="A" maxlength="3">
+      <label style="margin-top:6px">Coordonnées (x ; y ; z)</label>
+      <div class="coord-row">
+        <input type="number" id="pt-x" value="1" step="0.5">
+        <input type="number" id="pt-y" value="1" step="0.5">
+        <input type="number" id="pt-z" value="1" step="0.5">
+      </div>
+      <button class="add" onclick="addPoint()">Ajouter le point</button>
+    </div>
+
+    <!-- DROITE -->
+    <div class="panel" id="panel-droite" style="display:none">
+      <div class="equation-mode">
+        <button class="eq-btn active" data-mode="pv">Point + vecteur</button>
+        <button class="eq-btn" data-mode="2pts">Deux points</button>
+      </div>
+      <div id="droite-pv">
+        <label>Point A (x ; y ; z)</label>
+        <div class="coord-row">
+          <input type="number" id="dr-ax" value="0" step="0.5">
+          <input type="number" id="dr-ay" value="0" step="0.5">
+          <input type="number" id="dr-az" value="0" step="0.5">
+        </div>
+        <label>Vecteur directeur u⃗</label>
+        <div class="coord-row">
+          <input type="number" id="dr-ua" value="1" step="0.5">
+          <input type="number" id="dr-ub" value="1" step="0.5">
+          <input type="number" id="dr-uc" value="1" step="0.5">
+        </div>
+      </div>
+      <div id="droite-2pts" style="display:none">
+        <label>Point A (x ; y ; z)</label>
+        <div class="coord-row">
+          <input type="number" id="dr2-ax" value="0" step="0.5">
+          <input type="number" id="dr2-ay" value="0" step="0.5">
+          <input type="number" id="dr2-az" value="0" step="0.5">
+        </div>
+        <label>Point B (x ; y ; z)</label>
+        <div class="coord-row">
+          <input type="number" id="dr2-bx" value="2" step="0.5">
+          <input type="number" id="dr2-by" value="1" step="0.5">
+          <input type="number" id="dr2-bz" value="3" step="0.5">
+        </div>
+      </div>
+      <button class="add" onclick="addLine()">Ajouter la droite</button>
+    </div>
+
+    <!-- PLAN -->
+    <div class="panel" id="panel-plan" style="display:none">
+      <div class="equation-mode">
+        <button class="eq-btn active" data-pmode="cart">ax+by+cz+d=0</button>
+        <button class="eq-btn" data-pmode="pn">Point + normal</button>
+      </div>
+      <div id="plan-cart">
+        <label>Équation cartésienne</label>
+        <div class="coord-row-4">
+          <input type="number" id="pl-a" value="1" step="0.5" placeholder="a">
+          <input type="number" id="pl-b" value="1" step="0.5" placeholder="b">
+          <input type="number" id="pl-c" value="1" step="0.5" placeholder="c">
+          <input type="number" id="pl-d" value="-3" step="0.5" placeholder="d">
+        </div>
+        <div class="hint">a·x + b·y + c·z + d = 0</div>
+      </div>
+      <div id="plan-pn" style="display:none">
+        <label>Point A (x ; y ; z)</label>
+        <div class="coord-row">
+          <input type="number" id="pl2-ax" value="1" step="0.5">
+          <input type="number" id="pl2-ay" value="1" step="0.5">
+          <input type="number" id="pl2-az" value="1" step="0.5">
+        </div>
+        <label>Vecteur normal n⃗</label>
+        <div class="coord-row">
+          <input type="number" id="pl2-na" value="1" step="0.5">
+          <input type="number" id="pl2-nb" value="0" step="0.5">
+          <input type="number" id="pl2-nc" value="1" step="0.5">
+        </div>
+      </div>
+      <button class="add" onclick="addPlane()">Ajouter le plan</button>
+    </div>
+
+    <!-- SPHERE -->
+    <div class="panel" id="panel-sphere" style="display:none">
+      <label>Centre Ω (x ; y ; z)</label>
+      <div class="coord-row">
+        <input type="number" id="sp-cx" value="0" step="0.5">
+        <input type="number" id="sp-cy" value="0" step="0.5">
+        <input type="number" id="sp-cz" value="0" step="0.5">
+      </div>
+      <label>Rayon r</label>
+      <input type="number" id="sp-r" value="2" step="0.5" min="0.1" style="width:80px">
+      <button class="add" onclick="addSphere()">Ajouter la sphère</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Objets affichés</h2>
+    <div class="object-list" id="object-list">
+      <div style="color:var(--muted);font-size:11px;font-style:italic">Aucun objet.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Calculs automatiques</h2>
+    <div class="results-box" id="results-box">
+      Ajoutez des objets pour voir les calculs d'intersections et distances.
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Exemples rapides</h2>
+    <button class="add" style="background:var(--muted);margin-bottom:4px" onclick="loadExample1()">Plan médiateur de [AB]</button>
+    <button class="add" style="background:var(--muted);margin-bottom:4px" onclick="loadExample2()">Droite ∩ Plan</button>
+    <button class="add" style="background:var(--muted);margin-bottom:4px" onclick="loadExample3()">Sphère + plan sécant</button>
+    <button class="add" style="background:var(--muted)" onclick="clearAll()">Tout effacer</button>
+  </div>
+</aside>
+
+<main>
+  <canvas id="canvas"></canvas>
+  <div class="toolbar">
+    <button class="tool-btn" onclick="resetCamera()">Vue initiale</button>
+    <button class="tool-btn active" onclick="toggleLabels()" id="lbl-btn">Étiquettes</button>
+    <button class="tool-btn active" onclick="toggleGrid()" id="grid-btn">Grille</button>
+    <button class="tool-btn" onclick="toggleTraces()" id="trace-btn">Traces xOy/xOz/yOz</button>
+  </div>
+  <div class="info">Clic gauche : rotation · Molette : zoom · Clic droit : déplacer</div>
+</main>
+
+<script type="importmap">
+{"imports":{"three":"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js"}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const canvas = document.getElementById('canvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf5f2ea);
+const camera = new THREE.PerspectiveCamera(45,1,.1,1000);
+const initialCamPos = new THREE.Vector3(8,6,10);
+camera.position.copy(initialCamPos);
+camera.lookAt(0,0,0);
+const renderer = new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+window.addEventListener('resize',resize);
+
+scene.add(new THREE.AmbientLight(0xffffff,.7));
+const dirLight=new THREE.DirectionalLight(0xffffff,.5);dirLight.position.set(5,10,7);scene.add(dirLight);
+
+// Camera orbit
+let spherical={radius:0,theta:0,phi:0};
+const target=new THREE.Vector3(0,0,0);
+function updateSphericalFromCam(){const o=camera.position.clone().sub(target);spherical.radius=o.length();spherical.theta=Math.atan2(o.x,o.z);spherical.phi=Math.acos(Math.min(1,Math.max(-1,o.y/spherical.radius)))}
+updateSphericalFromCam();
+function applySpherical(){const s=Math.sin(spherical.phi);camera.position.set(target.x+spherical.radius*s*Math.sin(spherical.theta),target.y+spherical.radius*Math.cos(spherical.phi),target.z+spherical.radius*s*Math.cos(spherical.theta));camera.lookAt(target)}
+
+let dragging=false,rightDrag=false,lastX=0,lastY=0;
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{dragging=true;rightDrag=(e.button===2);lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointerup',()=>{dragging=false});
+canvas.addEventListener('pointermove',e=>{if(!dragging)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;if(rightDrag){const ps=spherical.radius*.0015;const r=new THREE.Vector3(),u=new THREE.Vector3();camera.matrix.extractBasis(r,u,new THREE.Vector3());target.addScaledVector(r,-dx*ps);target.addScaledVector(u,dy*ps);applySpherical()}else{spherical.theta-=dx*.005;spherical.phi-=dy*.005;spherical.phi=Math.max(.05,Math.min(Math.PI-.05,spherical.phi));applySpherical()}});
+canvas.addEventListener('wheel',e=>{e.preventDefault();spherical.radius*=(e.deltaY>0)?1.1:.9;spherical.radius=Math.max(2,Math.min(80,spherical.radius));applySpherical()},{passive:false});
+
+// Math -> Scene: math(x,y,z) -> three.js(x,z,y) so z is vertical
+function toScene(x,y,z){return new THREE.Vector3(x,z,y)}
+
+function makeLabel(text,color='#1a1a1a'){
+  const c2=document.createElement('canvas');c2.width=128;c2.height=64;
+  const ctx=c2.getContext('2d');ctx.fillStyle=color;ctx.font='bold 44px EB Garamond,Georgia,serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,64,32);
+  const tex=new THREE.CanvasTexture(c2);tex.needsUpdate=true;
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
+  const sprite=new THREE.Sprite(mat);sprite.scale.set(.8,.4,1);return sprite
+}
+
+// Axes
+const axesGroup=new THREE.Group();
+function makeAxis(d,color,label){const g=new THREE.Group();const L=6;const m=new THREE.LineBasicMaterial({color,linewidth:2});const ge=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),d.clone().multiplyScalar(L)]);g.add(new THREE.Line(ge,m));const hg=new THREE.ConeGeometry(.12,.35,16);const h=new THREE.Mesh(hg,new THREE.MeshBasicMaterial({color}));h.position.copy(d.clone().multiplyScalar(L));h.lookAt(d.clone().multiplyScalar(L+1));h.rotateX(Math.PI/2);g.add(h);const sp=makeLabel(label,'#'+color.toString(16).padStart(6,'0'));sp.position.copy(d.clone().multiplyScalar(L+.6));g.add(sp);return g}
+axesGroup.add(makeAxis(new THREE.Vector3(1,0,0),0x8b2018,'x'));
+axesGroup.add(makeAxis(new THREE.Vector3(0,1,0),0x2d5016,'z'));
+axesGroup.add(makeAxis(new THREE.Vector3(0,0,1),0x1a4a6b,'y'));
+axesGroup.add(new THREE.Mesh(new THREE.SphereGeometry(.08,16,16),new THREE.MeshBasicMaterial({color:0x1a1a1a})));
+const oL=makeLabel('O');oL.position.set(-.3,-.3,-.3);axesGroup.add(oL);
+scene.add(axesGroup);
+
+// Grid
+const gridGroup=new THREE.Group();
+function buildGrid(){gridGroup.clear();const sz=6;const m=new THREE.LineBasicMaterial({color:0xd4cfc0,transparent:true,opacity:.6});for(let i=-sz;i<=sz;i++){gridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(i,0,-sz),new THREE.Vector3(i,0,sz)]),m));gridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-sz,0,i),new THREE.Vector3(sz,0,i)]),m))}}
+buildGrid();scene.add(gridGroup);
+
+// Trace group for intersections with coord planes
+const traceGroup=new THREE.Group();
+traceGroup.visible=false;
+scene.add(traceGroup);
+
+// Object management
+const objects=[];
+let nextId=1;
+const palette=['#8b2018','#1a4a6b','#2d5016','#a06a14','#5a3a7e','#1f6f6f'];
+let showLabels=true,showGrid=true,showTraces=false;
+
+// Intersection/distance group
+const computedGroup=new THREE.Group();
+scene.add(computedGroup);
+
+function addObjToScene(obj){scene.add(obj.mesh);objects.push(obj);renderObjectList();computeAll()}
+function removeObj(id){const i=objects.findIndex(o=>o.id===id);if(i===-1)return;scene.remove(objects[i].mesh);objects.splice(i,1);renderObjectList();computeAll()}
+window.removeObj=removeObj;
+
+function renderObjectList(){
+  const list=document.getElementById('object-list');
+  if(!objects.length){list.innerHTML='<div style="color:var(--muted);font-size:11px;font-style:italic">Aucun objet.</div>';return}
+  list.innerHTML=objects.map(o=>`<div class="obj-item"><div class="obj-color" style="background:${o.color}"></div><div class="obj-label">${o.desc}</div><button class="obj-del" onclick="window.removeObj(${o.id})">×</button></div>`).join('')
+}
+
+// ========== ADD POINT ==========
+window.addPoint=function(){
+  const name=document.getElementById('pt-name').value||'P';
+  const x=parseFloat(document.getElementById('pt-x').value),y=parseFloat(document.getElementById('pt-y').value),z=parseFloat(document.getElementById('pt-z').value);
+  const color=palette[nextId%palette.length];
+  const group=new THREE.Group();
+  group.add(new THREE.Mesh(new THREE.SphereGeometry(.12,24,24),new THREE.MeshStandardMaterial({color})).translateX(0)||group.children[group.children.length-1]);
+  group.children[0].position.copy(toScene(x,y,z));
+  const lb=makeLabel(name,color);lb.position.copy(toScene(x,y,z)).add(new THREE.Vector3(.3,.3,.3));group.add(lb);
+  addObjToScene({id:nextId++,type:'point',color,desc:`${name}(${x};${y};${z})`,mesh:group,data:{x,y,z,name}})
+};
+
+// ========== ADD LINE ==========
+document.querySelectorAll('.eq-btn[data-mode]').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.eq-btn[data-mode]').forEach(x=>x.classList.remove('active'));b.classList.add('active');const m=b.dataset.mode;document.getElementById('droite-pv').style.display=m==='pv'?'':'none';document.getElementById('droite-2pts').style.display=m==='2pts'?'':'none'})});
+
+window.addLine=function(){
+  const mode=document.querySelector('.eq-btn[data-mode].active').dataset.mode;
+  let ax,ay,az,ua,ub,uc,desc;
+  if(mode==='pv'){ax=parseFloat(document.getElementById('dr-ax').value);ay=parseFloat(document.getElementById('dr-ay').value);az=parseFloat(document.getElementById('dr-az').value);ua=parseFloat(document.getElementById('dr-ua').value);ub=parseFloat(document.getElementById('dr-ub').value);uc=parseFloat(document.getElementById('dr-uc').value);desc=`D: A(${ax};${ay};${az}), u⃗(${ua};${ub};${uc})`}
+  else{ax=parseFloat(document.getElementById('dr2-ax').value);ay=parseFloat(document.getElementById('dr2-ay').value);az=parseFloat(document.getElementById('dr2-az').value);const bx=parseFloat(document.getElementById('dr2-bx').value),by=parseFloat(document.getElementById('dr2-by').value),bz=parseFloat(document.getElementById('dr2-bz').value);ua=bx-ax;ub=by-ay;uc=bz-az;desc=`D: A(${ax};${ay};${az}), B(${bx};${by};${bz})`}
+  const norm=Math.sqrt(ua*ua+ub*ub+uc*uc);if(norm<1e-6){alert('Vecteur directeur nul.');return}
+  const t=10;const p1=toScene(ax-t*ua,ay-t*ub,az-t*uc),p2=toScene(ax+t*ua,ay+t*ub,az+t*uc);
+  const color=palette[nextId%palette.length];const group=new THREE.Group();
+  const curve=new THREE.LineCurve3(p1,p2);group.add(new THREE.Mesh(new THREE.TubeGeometry(curve,2,.025,8,false),new THREE.MeshStandardMaterial({color})));
+  const pA=new THREE.Mesh(new THREE.SphereGeometry(.1,16,16),new THREE.MeshStandardMaterial({color}));pA.position.copy(toScene(ax,ay,az));group.add(pA);
+  addObjToScene({id:nextId++,type:'line',color,desc,mesh:group,data:{ax,ay,az,ua,ub,uc}})
+};
+
+// ========== ADD PLAN ==========
+document.querySelectorAll('.eq-btn[data-pmode]').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.eq-btn[data-pmode]').forEach(x=>x.classList.remove('active'));b.classList.add('active');const m=b.dataset.pmode;document.getElementById('plan-cart').style.display=m==='cart'?'':'none';document.getElementById('plan-pn').style.display=m==='pn'?'':'none'})});
+
+window.addPlane=function(){
+  const mode=document.querySelector('.eq-btn[data-pmode].active').dataset.pmode;
+  let a,b,c,d,desc;
+  if(mode==='cart'){a=parseFloat(document.getElementById('pl-a').value);b=parseFloat(document.getElementById('pl-b').value);c=parseFloat(document.getElementById('pl-c').value);d=parseFloat(document.getElementById('pl-d').value);desc=formatPlaneEq(a,b,c,d)}
+  else{const px=parseFloat(document.getElementById('pl2-ax').value),py=parseFloat(document.getElementById('pl2-ay').value),pz=parseFloat(document.getElementById('pl2-az').value);a=parseFloat(document.getElementById('pl2-na').value);b=parseFloat(document.getElementById('pl2-nb').value);c=parseFloat(document.getElementById('pl2-nc').value);d=-(a*px+b*py+c*pz);desc=formatPlaneEq(a,b,c,d)}
+  const norm=Math.sqrt(a*a+b*b+c*c);if(norm<1e-6){alert('Vecteur normal nul.');return}
+  const nVec=new THREE.Vector3(a,b,c).normalize();const k=-d/(a*a+b*b+c*c);const center=new THREE.Vector3(a*k,b*k,c*k);
+  const color=palette[nextId%palette.length];const group=new THREE.Group();
+  const pg=new THREE.PlaneGeometry(12,12);const pm=new THREE.MeshStandardMaterial({color,transparent:true,opacity:.3,side:THREE.DoubleSide,depthWrite:false});
+  const pmesh=new THREE.Mesh(pg,pm);const nS=new THREE.Vector3(nVec.x,nVec.z,nVec.y);const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),nS);
+  pmesh.quaternion.copy(q);pmesh.position.copy(toScene(center.x,center.y,center.z));group.add(pmesh);
+  const edges=new THREE.EdgesGeometry(pg);const ol=new THREE.LineSegments(edges,new THREE.LineBasicMaterial({color}));ol.quaternion.copy(q);ol.position.copy(toScene(center.x,center.y,center.z));group.add(ol);
+  // Normal indicator
+  const nl=new THREE.BufferGeometry().setFromPoints([toScene(center.x,center.y,center.z),toScene(center.x+nVec.x*1.2,center.y+nVec.y*1.2,center.z+nVec.z*1.2)]);
+  const dm=new THREE.LineDashedMaterial({color,dashSize:.15,gapSize:.1});const nline=new THREE.Line(nl,dm);nline.computeLineDistances();group.add(nline);
+  addObjToScene({id:nextId++,type:'plane',color,desc,mesh:group,data:{a,b,c,d}})
+};
+
+// ========== ADD SPHERE ==========
+window.addSphere=function(){
+  const cx=parseFloat(document.getElementById('sp-cx').value),cy=parseFloat(document.getElementById('sp-cy').value),cz=parseFloat(document.getElementById('sp-cz').value);
+  const r=parseFloat(document.getElementById('sp-r').value);if(r<=0){alert('Rayon doit être > 0');return}
+  const color=palette[nextId%palette.length];const group=new THREE.Group();
+  const sg=new THREE.SphereGeometry(r,32,32);
+  const sm=new THREE.MeshStandardMaterial({color,transparent:true,opacity:.25,side:THREE.DoubleSide,depthWrite:false});
+  const smesh=new THREE.Mesh(sg,sm);smesh.position.copy(toScene(cx,cy,cz));group.add(smesh);
+  // Wireframe
+  const wf=new THREE.Mesh(sg,new THREE.MeshBasicMaterial({color,wireframe:true,transparent:true,opacity:.15}));
+  wf.position.copy(toScene(cx,cy,cz));group.add(wf);
+  // Center marker
+  const cm=new THREE.Mesh(new THREE.SphereGeometry(.08,16,16),new THREE.MeshStandardMaterial({color}));cm.position.copy(toScene(cx,cy,cz));group.add(cm);
+  const lb=makeLabel('Ω',color);lb.position.copy(toScene(cx,cy,cz)).add(new THREE.Vector3(.3,.3,.3));group.add(lb);
+  addObjToScene({id:nextId++,type:'sphere',color,desc:`S: Ω(${cx};${cy};${cz}), r=${r}`,mesh:group,data:{cx,cy,cz,r}})
+};
+
+function formatPlaneEq(a,b,c,d){
+  const fmt=(v,first,sym)=>{if(Math.abs(v)<1e-9)return '';const s=v>0?(first?'':' + '):' − ';const abs=Math.abs(v);const num=abs===1?'':abs;return s+num+sym};
+  let eq='';eq+=fmt(a,eq==='','x');eq+=fmt(b,eq==='','y');eq+=fmt(c,eq==='','z');eq+=fmt(d,eq==='','');
+  if(eq.startsWith(' + '))eq=eq.slice(3);if(eq.startsWith(' − '))eq='−'+eq.slice(3);return `P: ${eq} = 0`
+}
+
+// ========== COMPUTE INTERSECTIONS & DISTANCES ==========
+function computeAll(){
+  // Clear previous computed visuals
+  while(computedGroup.children.length)computedGroup.remove(computedGroup.children[0]);
+  while(traceGroup.children.length)traceGroup.remove(traceGroup.children[0]);
+
+  const points=objects.filter(o=>o.type==='point');
+  const lines=objects.filter(o=>o.type==='line');
+  const planes=objects.filter(o=>o.type==='plane');
+  let results=[];
+
+  // Plan ∩ Plan
+  for(let i=0;i<planes.length;i++){
+    for(let j=i+1;j<planes.length;j++){
+      const r=intersectPlanePlan(planes[i].data,planes[j].data);
+      if(r){
+        if(r.type==='line'){
+          const t=10;const p1=toScene(r.px-t*r.dx,r.py-t*r.dy,r.pz-t*r.dz),p2=toScene(r.px+t*r.dx,r.py+t*r.dy,r.pz+t*r.dz);
+          const g=new THREE.BufferGeometry().setFromPoints([p1,p2]);
+          computedGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0xff6600,linewidth:2})));
+          results.push(`<strong>${planes[i].desc.split(':')[0]}∩${planes[j].desc.split(':')[0]}</strong> = droite`)
+        }else{results.push(`<strong>${planes[i].desc.split(':')[0]}∩${planes[j].desc.split(':')[0]}</strong> = plans parallèles`)}
+      }
+    }
+  }
+
+  // Droite ∩ Plan
+  for(const l of lines){
+    for(const p of planes){
+      const r=intersectLinePlane(l.data,p.data);
+      if(r){
+        if(r.type==='point'){
+          const sp=new THREE.Mesh(new THREE.SphereGeometry(.1,16,16),new THREE.MeshStandardMaterial({color:0xff6600}));
+          sp.position.copy(toScene(r.x,r.y,r.z));computedGroup.add(sp);
+          const lb=makeLabel('I','#ff6600');lb.position.copy(toScene(r.x,r.y,r.z)).add(new THREE.Vector3(.3,.3,.3));computedGroup.add(lb);
+          results.push(`<strong>${l.desc.split(':')[0]}∩${p.desc.split(':')[0]}</strong> = I(${r.x.toFixed(2)};${r.y.toFixed(2)};${r.z.toFixed(2)})`)
+        }else if(r.type==='parallel'){results.push(`<strong>${l.desc.split(':')[0]}∩${p.desc.split(':')[0]}</strong> = ∅ (parallèles)`)}
+        else{results.push(`<strong>${l.desc.split(':')[0]}⊂${p.desc.split(':')[0]}</strong> (droite incluse)`)}
+      }
+    }
+  }
+
+  // Distance point-plan
+  for(const pt of points){
+    for(const p of planes){
+      const dist=distPointPlane(pt.data,p.data);
+      // Draw perpendicular segment
+      const foot=projPointPlane(pt.data,p.data);
+      const g=new THREE.BufferGeometry().setFromPoints([toScene(pt.data.x,pt.data.y,pt.data.z),toScene(foot.x,foot.y,foot.z)]);
+      const dm=new THREE.LineDashedMaterial({color:0xe06020,dashSize:.15,gapSize:.1});const ln=new THREE.Line(g,dm);ln.computeLineDistances();computedGroup.add(ln);
+      const fp=new THREE.Mesh(new THREE.SphereGeometry(.06,12,12),new THREE.MeshBasicMaterial({color:0xe06020}));fp.position.copy(toScene(foot.x,foot.y,foot.z));computedGroup.add(fp);
+      results.push(`d(${pt.data.name},${p.desc.split(':')[0]}) = <strong>${dist.toFixed(3)}</strong>`)
+    }
+  }
+
+  // Distance point-line
+  for(const pt of points){
+    for(const l of lines){
+      const r=distPointLine(pt.data,l.data);
+      const g=new THREE.BufferGeometry().setFromPoints([toScene(pt.data.x,pt.data.y,pt.data.z),toScene(r.foot.x,r.foot.y,r.foot.z)]);
+      const dm=new THREE.LineDashedMaterial({color:0x2080c0,dashSize:.15,gapSize:.1});const ln=new THREE.Line(g,dm);ln.computeLineDistances();computedGroup.add(ln);
+      const fp=new THREE.Mesh(new THREE.SphereGeometry(.06,12,12),new THREE.MeshBasicMaterial({color:0x2080c0}));fp.position.copy(toScene(r.foot.x,r.foot.y,r.foot.z));computedGroup.add(fp);
+      results.push(`d(${pt.data.name},${l.desc.split(':')[0]}) = <strong>${r.dist.toFixed(3)}</strong>`)
+    }
+  }
+
+  // Traces on coord planes
+  if(showTraces){
+    // Intersection with x=0 (y=0 in math = z=0 in scene), y=0, z=0
+    const coordPlanes=[{a:1,b:0,c:0,d:0,label:'x=0'},{a:0,b:1,c:0,d:0,label:'y=0'},{a:0,b:0,c:1,d:0,label:'z=0'}];
+    const traceColors=[0x8b2018,0x1a4a6b,0x2d5016];
+    for(const p of planes){
+      for(let ci=0;ci<3;ci++){
+        const r=intersectPlanePlan(p.data,coordPlanes[ci]);
+        if(r&&r.type==='line'){
+          const t=8;const p1=toScene(r.px-t*r.dx,r.py-t*r.dy,r.pz-t*r.dz),p2=toScene(r.px+t*r.dx,r.py+t*r.dy,r.pz+t*r.dz);
+          const dm=new THREE.LineDashedMaterial({color:traceColors[ci],dashSize:.2,gapSize:.1,transparent:true,opacity:.6});
+          const ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1,p2]),dm);ln.computeLineDistances();traceGroup.add(ln)
+        }
+      }
+    }
+    for(const l of lines){
+      for(let ci=0;ci<3;ci++){
+        const r=intersectLinePlane(l.data,coordPlanes[ci]);
+        if(r&&r.type==='point'){
+          const sp=new THREE.Mesh(new THREE.SphereGeometry(.08,12,12),new THREE.MeshBasicMaterial({color:traceColors[ci]}));
+          sp.position.copy(toScene(r.x,r.y,r.z));traceGroup.add(sp)
+        }
+      }
+    }
+  }
+
+  document.getElementById('results-box').innerHTML=results.length?results.join('<br>'):'Ajoutez des objets pour voir les calculs.'
+}
+
+// ========== MATH FUNCTIONS ==========
+function intersectPlanePlan(p1,p2){
+  // p1: a1x+b1y+c1z+d1=0, p2: a2x+b2y+c2z+d2=0
+  // Direction = n1 × n2
+  const dx=p1.b*p2.c-p1.c*p2.b,dy=p1.c*p2.a-p1.a*p2.c,dz=p1.a*p2.b-p1.b*p2.a;
+  const norm=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  if(norm<1e-9)return{type:'parallel'};
+  // Find a point on the intersection: choose the coord with largest |d|
+  let px=0,py=0,pz=0;
+  if(Math.abs(dx)>=Math.abs(dy)&&Math.abs(dx)>=Math.abs(dz)){
+    // solve b1*y+c1*z=-d1, b2*y+c2*z=-d2
+    const det=p1.b*p2.c-p1.c*p2.b;
+    if(Math.abs(det)>1e-9){py=(-p1.d*p2.c+p1.c*p2.d)/det;pz=(-p1.b*p2.d+p1.d*p2.b)/det}
+  }else if(Math.abs(dy)>=Math.abs(dz)){
+    const det=p1.a*p2.c-p1.c*p2.a;
+    if(Math.abs(det)>1e-9){px=(-p1.d*p2.c+p1.c*p2.d)/det;pz=(-p1.a*p2.d+p1.d*p2.a)/det}
+  }else{
+    const det=p1.a*p2.b-p1.b*p2.a;
+    if(Math.abs(det)>1e-9){px=(-p1.d*p2.b+p1.b*p2.d)/det;py=(-p1.a*p2.d+p1.d*p2.a)/det}
+  }
+  return{type:'line',px,py,pz,dx:dx/norm,dy:dy/norm,dz:dz/norm}
+}
+
+function intersectLinePlane(line,plane){
+  const dot=plane.a*line.ua+plane.b*line.ub+plane.c*line.uc;
+  const val=plane.a*line.ax+plane.b*line.ay+plane.c*line.az+plane.d;
+  if(Math.abs(dot)<1e-9){return Math.abs(val)<1e-9?{type:'included'}:{type:'parallel'}}
+  const t=-val/dot;
+  return{type:'point',x:line.ax+t*line.ua,y:line.ay+t*line.ub,z:line.az+t*line.uc}
+}
+
+function distPointPlane(pt,plane){
+  return Math.abs(plane.a*pt.x+plane.b*pt.y+plane.c*pt.z+plane.d)/Math.sqrt(plane.a*plane.a+plane.b*plane.b+plane.c*plane.c)
+}
+function projPointPlane(pt,plane){
+  const n2=plane.a*plane.a+plane.b*plane.b+plane.c*plane.c;const t=-(plane.a*pt.x+plane.b*pt.y+plane.c*pt.z+plane.d)/n2;
+  return{x:pt.x+plane.a*t,y:pt.y+plane.b*t,z:pt.z+plane.c*t}
+}
+function distPointLine(pt,line){
+  // foot = A + ((AP·u)/|u|²)·u
+  const apx=pt.x-line.ax,apy=pt.y-line.ay,apz=pt.z-line.az;
+  const u2=line.ua*line.ua+line.ub*line.ub+line.uc*line.uc;
+  const t=(apx*line.ua+apy*line.ub+apz*line.uc)/u2;
+  const fx=line.ax+t*line.ua,fy=line.ay+t*line.ub,fz=line.az+t*line.uc;
+  const dx=pt.x-fx,dy=pt.y-fy,dz=pt.z-fz;
+  return{dist:Math.sqrt(dx*dx+dy*dy+dz*dz),foot:{x:fx,y:fy,z:fz}}
+}
+
+// ========== TABS ==========
+document.querySelectorAll('.tab').forEach(tab=>{tab.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');const n=tab.dataset.tab;
+  ['point','droite','plan','sphere'].forEach(p=>document.getElementById('panel-'+p).style.display=p===n?'':'none')
+})});
+
+// ========== TOOLBAR ==========
+window.resetCamera=function(){camera.position.copy(initialCamPos);target.set(0,0,0);updateSphericalFromCam();camera.lookAt(target)};
+window.toggleLabels=function(){showLabels=!showLabels;document.getElementById('lbl-btn').classList.toggle('active',showLabels);scene.traverse(o=>{if(o.isSprite)o.visible=showLabels})};
+window.toggleGrid=function(){showGrid=!showGrid;gridGroup.visible=showGrid;document.getElementById('grid-btn').classList.toggle('active',showGrid)};
+window.toggleTraces=function(){showTraces=!showTraces;traceGroup.visible=showTraces;document.getElementById('trace-btn').classList.toggle('active',showTraces);computeAll()};
+window.clearAll=function(){[...objects].forEach(o=>removeObj(o.id))};
+
+// ========== EXAMPLES ==========
+window.loadExample1=function(){clearAll();document.getElementById('pt-name').value='A';document.getElementById('pt-x').value=1;document.getElementById('pt-y').value=1;document.getElementById('pt-z').value=1;addPoint();document.getElementById('pt-name').value='B';document.getElementById('pt-x').value=3;document.getElementById('pt-y').value=1;document.getElementById('pt-z').value=3;addPoint();document.querySelector('.eq-btn[data-pmode="cart"]').click();document.getElementById('pl-a').value=1;document.getElementById('pl-b').value=0;document.getElementById('pl-c').value=1;document.getElementById('pl-d').value=-4;addPlane()};
+window.loadExample2=function(){clearAll();document.querySelectorAll('.tab')[1].click();document.querySelector('.eq-btn[data-mode="pv"]').click();document.getElementById('dr-ax').value=0;document.getElementById('dr-ay').value=0;document.getElementById('dr-az').value=0;document.getElementById('dr-ua').value=1;document.getElementById('dr-ub').value=1;document.getElementById('dr-uc').value=1;addLine();document.querySelectorAll('.tab')[2].click();document.querySelector('.eq-btn[data-pmode="cart"]').click();document.getElementById('pl-a').value=0;document.getElementById('pl-b').value=0;document.getElementById('pl-c').value=1;document.getElementById('pl-d').value=-2;addPlane()};
+window.loadExample3=function(){clearAll();document.querySelectorAll('.tab')[3].click();document.getElementById('sp-cx').value=0;document.getElementById('sp-cy').value=0;document.getElementById('sp-cz').value=0;document.getElementById('sp-r').value=3;addSphere();document.querySelectorAll('.tab')[2].click();document.querySelector('.eq-btn[data-pmode="cart"]').click();document.getElementById('pl-a').value=0;document.getElementById('pl-b').value=0;document.getElementById('pl-c').value=1;document.getElementById('pl-d').value=-2;addPlane()};
+
+// ========== RENDER ==========
+function animate(){requestAnimationFrame(animate);renderer.render(scene,camera)}
+resize();animate();
+</script>
+</body>
+</html>
