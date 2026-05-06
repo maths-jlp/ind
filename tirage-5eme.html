@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tirage 5ème — jlp Maths Tools</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root{--bg:#fafaf7;--panel:#ffffff;--ink:#1a1a1a;--muted:#6b6558;--line:#e5e0d4;--accent:#8b2018;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100vh;overflow:hidden}
+  body{background:var(--bg);color:var(--ink);font-family:'EB Garamond',Georgia,serif;padding:20px 24px;display:flex;flex-direction:column;align-items:center;gap:20px}
+  .top-bar{width:100%;max-width:800px;display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--line)}
+  .back-link{padding:5px 12px;border:1px solid var(--line);border-radius:4px;color:var(--muted);text-decoration:none;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all .15s}
+  .back-link:hover{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  h1{font-size:22px;font-weight:700}
+  h1 .accent{color:var(--accent)}
+
+  .display{
+    font-family:'EB Garamond',Georgia,serif;
+    font-size:140px;
+    font-weight:700;
+    letter-spacing:-.02em;
+    color:var(--ink);
+    line-height:1;
+    user-select:none;
+    min-height:150px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:color .2s;
+  }
+  .display.rolling{color:var(--muted);opacity:.4}
+  .display.result{color:var(--accent);animation:appear .3s ease-out}
+  @keyframes appear{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+
+  .btn-tirage{
+    padding:14px 52px;border:none;border-radius:8px;cursor:pointer;
+    font-family:'EB Garamond',serif;font-size:22px;font-weight:700;
+    background:var(--ink);color:var(--bg);transition:all .15s;
+  }
+  .btn-tirage:hover{background:var(--accent);transform:translateY(-2px)}
+  .btn-tirage:active{transform:translateY(0)}
+
+  .options{display:flex;gap:14px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted)}
+  .options label{cursor:pointer;display:flex;align-items:center;gap:6px}
+
+  .history{width:100%;max-width:800px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+  .history-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .history-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:'JetBrains Mono',monospace}
+  .clear-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+  .clear-btn:hover{color:var(--accent)}
+  .history-list{display:flex;flex-wrap:wrap;gap:6px;min-height:28px}
+  .history-item{padding:3px 10px;background:var(--bg);border:1px solid var(--line);border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink)}
+  .history-empty{color:var(--muted);font-style:italic;font-size:13px}
+
+  .counter{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
+  .hint{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>jlp <span class="accent">Maths</span> Tools — Tirage 5ème</h1>
+  <a href="index.html" class="back-link">← Tableau de bord</a>
+</div>
+
+<div class="display" id="display">?</div>
+
+<button class="btn-tirage" onclick="tirage()">Tirer</button>
+
+<div class="options">
+  <label>
+    <input type="checkbox" id="noRepeat" checked>
+    Ne pas retirer un élève déjà interrogé
+  </label>
+  <span class="counter" id="counter"></span>
+</div>
+
+<div class="history">
+  <div class="history-header">
+    <span class="history-title">Élèves déjà tirés</span>
+    <button class="clear-btn" onclick="clearHistory()">Réinitialiser</button>
+  </div>
+  <div class="history-list" id="history-list">
+    <span class="history-empty">Aucun tirage pour l'instant.</span>
+  </div>
+</div>
+
+<div class="hint">Appuyer sur Espace pour tirer</div>
+
+<script>
+  const eleves = ["Théo","Colin","Mohsen","Nina","Lovany","Bérénice","Othmane","Flavio","Milo","Soumaya","Océanne","Sofia","Hugo","Pauline","Myriam","Lison","Ahmed","Lise","Pierre","Baptiste","Charly","Abygaïl","Joachim","Eléonore","Diane","Emily","Milo","Bethelle","Philémon","Kamélia","Louison","Raphaël","Albane"];
+
+  let drawn = [];
+  const display = document.getElementById('display');
+  const historyList = document.getElementById('history-list');
+  const counter = document.getElementById('counter');
+  const noRepeat = document.getElementById('noRepeat');
+
+  function tirage() {
+    let pool = noRepeat.checked ? eleves.filter(e => !drawn.includes(e)) : [...eleves];
+    if (pool.length === 0) {
+      if (confirm('Tous les élèves ont été tirés ! Réinitialiser ?')) {
+        drawn = [];
+        renderHistory();
+        tirage();
+      }
+      return;
+    }
+    display.className = 'display rolling';
+    const start = Date.now();
+    const interval = setInterval(() => {
+      display.textContent = pool[Math.floor(Math.random() * pool.length)];
+      if (Date.now() - start >= 700) {
+        clearInterval(interval);
+        const result = pool[Math.floor(Math.random() * pool.length)];
+        display.textContent = result;
+        display.className = 'display result';
+        drawn.push(result);
+        renderHistory();
+      }
+    }, 60);
+  }
+
+  function renderHistory() {
+    counter.textContent = drawn.length + '/' + eleves.length + ' tirés';
+    if (!drawn.length) {
+      historyList.innerHTML = '<span class="history-empty">Aucun tirage pour l\'instant.</span>';
+      return;
+    }
+    historyList.innerHTML = drawn.map(n => `<span class="history-item">${n}</span>`).join('');
+  }
+
+  function clearHistory() {
+    drawn = [];
+    display.className = 'display';
+    display.textContent = '?';
+    renderHistory();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault();
+      tirage();
+    }
+  });
+
+  renderHistory();
+</script>
+</body>
+</html>
