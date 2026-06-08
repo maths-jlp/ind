@@ -69,14 +69,12 @@
     border-bottom: 1px solid var(--line);
   }
 
-  /* Grille 5 colonnes pour outils et liens externes */
   .grid-5 {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 10px;
   }
 
-  /* Grille classes (plus flexible) */
   .grid-classes {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -102,10 +100,7 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   }
-  .card-icon {
-    font-size: 18px;
-    margin-bottom: 2px;
-  }
+  .card-icon { font-size: 18px; margin-bottom: 2px; }
   .card-title {
     font-size: 15px;
     font-weight: 600;
@@ -211,6 +206,12 @@
         <div class="card-icon">🖼</div>
         <div class="card-title">Fond projection</div>
         <div class="card-desc">blanc · repère · lignes</div>
+        <div class="card-tag">v1</div>
+      </a>
+      <a href="compte-est-bon.html" class="card">
+        <div class="card-icon">🔢</div>
+        <div class="card-title">Le compte est bon</div>
+        <div class="card-desc">6 plaques · cible · timer</div>
         <div class="card-tag">v1</div>
       </a>
     </div>
