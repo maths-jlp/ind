@@ -92,33 +92,31 @@
 			border-color: var(--ink);
 		}
 
-		h1 {
-			font-size: 2.5rem;
+		.display {
+			display: none;
+			font-size: clamp(3.5rem, 13vw, 10rem);
 			font-weight: 700;
 			letter-spacing: -0.02em;
-			color: var(--ink);
 			line-height: 1;
 			user-select: none;
-			min-height: 3rem;
-			display: flex;
+			min-height: 7rem;
+			max-width: 95vw;
 			align-items: center;
 			justify-content: center;
+			text-align: center;
+			color: var(--muted);
+			opacity: 0.6;
 			transition: color 0.15s;
 		}
 
-		.display {
-			display: none;
-			color: var(--muted);
-			opacity: 0.6;
-		}
-
 		.display.rolling {
-			display: block;
+			display: flex;
 			color: var(--muted);
+			opacity: 1;
 		}
 
 		.display.result {
-			display: block;
+			display: flex;
 			color: var(--accent);
 			animation: appear 0.3s ease-out;
 		}
