@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Console Python — jlp Maths Tools</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #fafaf7;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #6b6558;
+    --line: #e5e0d4;
+    --accent: #8b2018;
+    --ok: #1d6b3f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'EB Garamond', Georgia, serif;
+    display: flex;
+    flex-direction: column;
+    padding: 14px 18px;
+    gap: 10px;
+  }
+
+  /* ── En-tête ───────────────────────────────────────── */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .title { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+  .title .accent { color: var(--accent); }
+  .title .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  .back-link {
+    padding: 5px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.15s;
+  }
+  .back-link:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  /* ── Barre d'outils ────────────────────────────────── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  button, select {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  button:hover:not(:disabled), select:hover { border-color: var(--accent); color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-run {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+    font-weight: 500;
+    padding: 7px 18px;
+  }
+  .btn-run:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+  .status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.loading { background: #c08a1e; animation: pulse 1s ease-in-out infinite; }
+  .dot.ready   { background: var(--ok); }
+  .dot.running { background: var(--accent); animation: pulse 0.7s ease-in-out infinite; }
+  .dot.error   { background: var(--accent); }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }
+
+  /* ── Zone principale ───────────────────────────────── */
+  .workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    min-height: 0;
+  }
+
+  .pane {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .pane-head {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex: none;
+  }
+  .pane-head button {
+    border: none;
+    background: none;
+    padding: 0;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .pane-head button:hover { color: var(--accent); }
+
+  #editor {
+    flex: 1;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink);
+    background: transparent;
+    tab-size: 4;
+    white-space: pre;
+    overflow: auto;
+  }
+
+  #console {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .out-err  { color: var(--accent); }
+  .out-echo { color: var(--muted); }
+  .out-note { color: var(--muted); font-style: italic; }
+  .out-ok   { color: var(--ok); }
+  #console img {
+    max-width: 100%;
+    display: block;
+    margin: 10px 0;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fff;
+  }
+
+  /* ── Entrées pré-remplies ──────────────────────────── */
+  .stdin-zone { flex: none; border-top: 1px solid var(--line); }
+  .stdin-zone summary {
+    padding: 6px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+  }
+  .stdin-zone summary::-webkit-details-marker { display: none }
+  .stdin-zone summary:hover { color: var(--accent); }
+  .stdin-zone summary::before { content: "▸ "; }
+  .stdin-zone[open] summary::before { content: "▾ "; }
+  #stdin {
+    width: 100%;
+    height: 68px;
+    border: none;
+    border-top: 1px solid var(--line);
+    outline: none;
+    resize: none;
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .stdin-hint {
+    padding: 5px 12px 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--bg);
+  }
+
+  .hint-bar {
+    flex: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  @media (max-width: 860px) {
+    html, body { height: auto; overflow: auto; }
+    .workspace { grid-template-columns: 1fr; }
+    #editor { min-height: 300px; }
+    #console { min-height: 220px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <div class="title">
+      jlp <span class="accent">Maths</span> Tools — Console Python
+      <span class="sub" id="version-tag"></span>
+    </div>
+    <a href="index.html" class="back-link">← Tableau de bord</a>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn-run" id="btn-run" disabled>▶ Exécuter</button>
+    <button id="btn-stop" disabled>Réinitialiser</button>
+    <select id="examples">
+      <option value="">Exemples…</option>
+      <option value="base">Boucle et affichage</option>
+      <option value="input">Saisie utilisateur</option>
+      <option value="graph">Graphique (matplotlib)</option>
+      <option value="alea">Simulation aléatoire</option>
+      <option value="suite">Suite récurrente</option>
+    </select>
+    <div class="status"><span class="dot loading" id="dot"></span><span id="status-text">chargement de Python…</span></div>
+  </div>
+
+  <div class="workspace">
+    <div class="pane">
+      <div class="pane-head">
+        <span>Programme</span>
+        <button id="btn-clear-code">effacer</button>
+      </div>
+      <textarea id="editor" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+      <details class="stdin-zone">
+        <summary>Entrées pré-remplies (facultatif)</summary>
+        <textarea id="stdin" spellcheck="false" placeholder="Une réponse par ligne…"></textarea>
+        <div class="stdin-hint">Chaque ligne alimente un appel à input(). Si la liste est épuisée, une fenêtre de saisie s'ouvre.</div>
+      </details>
+    </div>
+
+    <div class="pane">
+      <div class="pane-head">
+        <span>Console</span>
+        <button id="btn-clear-out">effacer</button>
+      </div>
+      <div id="console"></div>
+    </div>
+  </div>
+
+  <div class="hint-bar">Ctrl + Entrée pour exécuter · Tab pour indenter</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Versions candidates, essayées dans l'ordre : la page reste fonctionnelle
+  // même si l'une d'elles disparaît ou si la numérotation change.
+  var PYODIDE_VERSIONS = ["v314.0.6", "v0.28.3", "v0.27.7", "v0.26.4"];
+
+  var editor      = document.getElementById("editor");
+  var consoleEl   = document.getElementById("console");
+  var stdinEl     = document.getElementById("stdin");
+  var btnRun      = document.getElementById("btn-run");
+  var btnStop     = document.getElementById("btn-stop");
+  var dot         = document.getElementById("dot");
+  var statusText  = document.getElementById("status-text");
+  var versionTag  = document.getElementById("version-tag");
+  var examplesSel = document.getElementById("examples");
+
+  var pyodide = null;
+  var running = false;
+  var stdinQueue = [];
+  var STORAGE_KEY = "jlp_console_python";
+
+  var EXAMPLES = {
+    base:
+      "# Table de multiplication\n" +
+      "n = 7\n" +
+      "for i in range(1, 11):\n" +
+      "    print(i, \"x\", n, \"=\", i * n)\n",
+    input:
+      "# Résolution d'une équation du premier degré : ax + b = 0\n" +
+      "a = float(input(\"Valeur de a : \"))\n" +
+      "b = float(input(\"Valeur de b : \"))\n" +
+      "\n" +
+      "if a == 0:\n" +
+      "    print(\"Ce n'est pas une équation du premier degré.\")\n" +
+      "else:\n" +
+      "    print(\"Solution : x =\", -b / a)\n",
+    graph:
+      "import matplotlib.pyplot as plt\n" +
+      "import numpy as np\n" +
+      "\n" +
+      "x = np.linspace(-5, 5, 300)\n" +
+      "\n" +
+      "plt.plot(x, x**2, label=\"f(x) = x²\")\n" +
+      "plt.plot(x, 2*x + 1, label=\"g(x) = 2x + 1\")\n" +
+      "plt.axhline(0, color=\"black\", linewidth=0.8)\n" +
+      "plt.axvline(0, color=\"black\", linewidth=0.8)\n" +
+      "plt.grid(True, alpha=0.3)\n" +
+      "plt.legend()\n" +
+      "plt.title(\"Deux fonctions\")\n" +
+      "plt.show()\n",
+    alea:
+      "import random\n" +
+      "\n" +
+      "# Fréquence d'obtention d'un 6 sur un grand nombre de lancers\n" +
+      "n = 10000\n" +
+      "succes = 0\n" +
+      "\n" +
+      "for _ in range(n):\n" +
+      "    if random.randint(1, 6) == 6:\n" +
+      "        succes += 1\n" +
+      "\n" +
+      "print(\"Lancers   :\", n)\n" +
+      "print(\"Nombre de 6 :\", succes)\n" +
+      "print(\"Fréquence :\", round(succes / n, 4))\n" +
+      "print(\"Théorie   :\", round(1/6, 4))\n",
+    suite:
+      "# Suite récurrente : u(n+1) = 0.5 * u(n) + 3\n" +
+      "u = 10\n" +
+      "print(\"u0 =\", u)\n" +
+      "\n" +
+      "for n in range(1, 15):\n" +
+      "    u = 0.5 * u + 3\n" +
+      "    print(\"u\" + str(n), \"=\", round(u, 6))\n" +
+      "\n" +
+      "print(\"\\nLa suite semble converger vers 6.\")\n"
+  };
+
+  // ── Console ────────────────────────────────────────────
+  function append(text, cls) {
+    var span = document.createElement("span");
+    if (cls) span.className = cls;
+    span.textContent = text;
+    consoleEl.appendChild(span);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function appendImage(b64) {
+    var img = document.createElement("img");
+    img.src = "data:image/png;base64," + b64;
+    img.alt = "Graphique";
+    consoleEl.appendChild(img);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function setStatus(state, text) {
+    dot.className = "dot " + state;
+    statusText.textContent = text;
+  }
+
+  // ── Sauvegarde locale du programme ─────────────────────
+  function saveCode() {
+    try { localStorage.setItem(STORAGE_KEY, editor.value); } catch (e) { /* ignoré */ }
+  }
+  function loadCode() {
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if (saved !== null) return saved;
+    } catch (e) { /* ignoré */ }
+    return EXAMPLES.base;
+  }
+
+  // ── input() : file d'attente puis fenêtre de saisie ────
+  function askInput(promptText) {
+    var label = promptText || "";
+    var value;
+    if (stdinQueue.length > 0) {
+      value = stdinQueue.shift();
+    } else {
+      value = window.prompt(label || "Saisie :");
+      if (value === null) throw new Error("__JLP_ANNULE__");
+    }
+    append(label + value + "\n", "out-echo");
+    return value;
+  }
+
+  // ── Chargement de Pyodide ──────────────────────────────
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = src;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error("script indisponible : " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  async function boot() {
+    var lastError = null;
+    for (var i = 0; i < PYODIDE_VERSIONS.length; i++) {
+      var version = PYODIDE_VERSIONS[i];
+      var base = "https://cdn.jsdelivr.net/pyodide/" + version + "/full/";
+      try {
+        setStatus("loading", "chargement de Python (" + version + ")…");
+        await loadScript(base + "pyodide.js");
+        var py = await loadPyodide({ indexURL: base });
+        pyodide = py;
+        versionTag.textContent = "Python " + py.runPython(
+          "import sys\n'.'.join(map(str, sys.version_info[:3]))"
+        );
+        return;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError || new Error("aucune version de Pyodide n'a pu être chargée");
+  }
+
+  // ── Exécution ──────────────────────────────────────────
+  async function run() {
+    if (!pyodide || running) return;
+    running = true;
+    btnRun.disabled = true;
+    setStatus("running", "exécution…");
+
+    var code = editor.value;
+    saveCode();
+
+    // Les lignes d'entrées pré-remplies alimentent les appels à input()
+    var raw = stdinEl.value;
+    stdinQueue = raw.length > 0 ? raw.replace(/\r/g, "").split("\n") : [];
+    if (stdinQueue.length > 0 && stdinQueue[stdinQueue.length - 1] === "") stdinQueue.pop();
+
+    try {
+      // Installe automatiquement les bibliothèques importées (numpy, matplotlib…)
+      var needsPackages = /^\s*(import|from)\s/m.test(code);
+      if (needsPackages) {
+        setStatus("running", "chargement des bibliothèques…");
+        await pyodide.loadPackagesFromImports(code);
+        setStatus("running", "exécution…");
+      }
+
+      var usesPlot = /matplotlib|pylab/.test(code);
+      if (usesPlot) {
+        await pyodide.runPythonAsync(
+          "import matplotlib\n" +
+          "matplotlib.use('AGG')\n" +
+          "import matplotlib.pyplot as _plt\n" +
+          "_plt.close('all')\n" +
+          "_plt.show = lambda *a, **k: None\n"
+        );
+      }
+
+      await pyodide.runPythonAsync(code);
+
+      if (usesPlot) {
+        var figures = await pyodide.runPythonAsync(
+          "import io, base64\n" +
+          "import matplotlib.pyplot as _plt\n" +
+          "_imgs = []\n" +
+          "for _num in _plt.get_fignums():\n" +
+          "    _buf = io.BytesIO()\n" +
+          "    _plt.figure(_num).savefig(_buf, format='png', dpi=110, bbox_inches='tight')\n" +
+          "    _imgs.append(base64.b64encode(_buf.getvalue()).decode())\n" +
+          "_plt.close('all')\n" +
+          "_imgs\n"
+        );
+        if (figures) {
+          var list = figures.toJs ? figures.toJs() : figures;
+          for (var j = 0; j < list.length; j++) appendImage(list[j]);
+          if (figures.destroy) figures.destroy();
+        }
+      }
+
+      setStatus("ready", "prêt");
+    } catch (err) {
+      var message = String(err && err.message ? err.message : err);
+      if (message.indexOf("__JLP_ANNULE__") !== -1) {
+        append("\n⏹ Exécution interrompue (saisie annulée).\n", "out-note");
+      } else {
+        append("\n" + message.trim() + "\n", "out-err");
+      }
+      setStatus("ready", "prêt");
+    } finally {
+      running = false;
+      btnRun.disabled = false;
+      stdinQueue = [];
+    }
+  }
+
+  // ── Événements ─────────────────────────────────────────
+  btnRun.addEventListener("click", run);
+
+  btnStop.addEventListener("click", function () {
+    consoleEl.innerHTML = "";
+    if (pyodide) {
+      // Supprime les variables de l'élève sans toucher aux clés internes de Python
+      pyodide.runPython(
+        "for _k in [k for k in list(globals().keys()) if not k.startswith('_')]:\n" +
+        "    del globals()[_k]\n"
+      );
+      pyodide.globals.set("_jlp_ask_input", askInput);
+      pyodide.runPython(SETUP_PY);
+    }
+    append("Environnement réinitialisé : toutes les variables ont été effacées.\n", "out-note");
+  });
+
+  document.getElementById("btn-clear-out").addEventListener("click", function () {
+    consoleEl.innerHTML = "";
+  });
+
+  document.getElementById("btn-clear-code").addEventListener("click", function () {
+    editor.value = "";
+    saveCode();
+    editor.focus();
+  });
+
+  examplesSel.addEventListener("change", function () {
+    var key = examplesSel.value;
+    if (key && EXAMPLES[key]) {
+      editor.value = EXAMPLES[key];
+      saveCode();
+      consoleEl.innerHTML = "";
+      stdinEl.value = key === "input" ? "3\n-6" : "";
+    }
+    examplesSel.value = "";
+    editor.focus();
+  });
+
+  editor.addEventListener("input", saveCode);
+
+  // Tab pour indenter, indentation automatique après ':'
+  editor.addEventListener("keydown", function (e) {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      var start = editor.selectionStart;
+      var end = editor.selectionEnd;
+      editor.value = editor.value.slice(0, start) + "    " + editor.value.slice(end);
+      editor.selectionStart = editor.selectionEnd = start + 4;
+      saveCode();
+    } else if (e.key === "Enter") {
+      var pos = editor.selectionStart;
+      var lineStart = editor.value.lastIndexOf("\n", pos - 1) + 1;
+      var line = editor.value.slice(lineStart, pos);
+      var indentMatch = line.match(/^[ \t]*/);
+      var indent = indentMatch ? indentMatch[0] : "";
+      if (/:\s*$/.test(line)) indent += "    ";
+      if (indent.length > 0) {
+        e.preventDefault();
+        var insert = "\n" + indent;
+        editor.value = editor.value.slice(0, pos) + insert + editor.value.slice(editor.selectionEnd);
+        editor.selectionStart = editor.selectionEnd = pos + insert.length;
+        saveCode();
+      }
+    }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); }
+    if (e.key === "F5" && !e.ctrlKey) { e.preventDefault(); run(); }
+  });
+
+  // ── Préparation de l'environnement Python ──────────────
+  var SETUP_PY =
+    "import builtins\n" +
+    "def _jlp_input(prompt=''):\n" +
+    "    return _jlp_ask_input(str(prompt))\n" +
+    "builtins.input = _jlp_input\n";
+
+  editor.value = loadCode();
+
+  boot().then(function () {
+    pyodide.setStdout({ batched: function (s) { append(s + "\n"); } });
+    pyodide.setStderr({ batched: function (s) { append(s + "\n", "out-err"); } });
+    pyodide.globals.set("_jlp_ask_input", askInput);
+    pyodide.runPython(SETUP_PY);
+
+    setStatus("ready", "prêt");
+    btnRun.disabled = false;
+    btnStop.disabled = false;
+    append("Python est prêt. Ctrl + Entrée pour exécuter.\n", "out-ok");
+    editor.focus();
+  }).catch(function (err) {
+    setStatus("error", "échec du chargement");
+    append(
+      "Impossible de charger Python.\n\n" +
+      "Vérifie ta connexion internet : le moteur Python est téléchargé depuis un\n" +
+      "serveur externe au premier lancement.\n\n" +
+      "Détail technique : " + (err && err.message ? err.message : err) + "\n",
+      "out-err"
+    );
+  });
+})();
+</script>
+
+</body>
+</html>
