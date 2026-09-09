@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Tirage élève — jlp Maths Tools</title>
+	<style>
+		@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap');
+
+		:root {
+			--bg: #fafaf7;
+			--panel: #ffffff;
+			--ink: #1a1a1a;
+			--muted: #6b6558;
+			--line: #e5e0d4;
+			--accent: #8b2018;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		html, body {
+			height: 100%;
+			overflow: hidden;
+		}
+
+		body {
+			background: var(--bg);
+			color: var(--ink);
+			font-family: 'EB Garamond', Georgia, serif;
+			padding: 2rem;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 2rem;
+		}
+
+		.top-bar {
+			width: 100%;
+			max-width: 800px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding-bottom: 1rem;
+			border-bottom: 1px solid var(--line);
+		}
+
+		.back-link {
+			padding: 0.5rem 1rem;
+			border: 1px solid var(--line);
+			border-radius: 0.25rem;
+			color: var(--muted);
+			text-decoration: none;
+			font-size: 0.875rem;
+			font-family: 'JetBrains Mono', monospace;
+			transition: all 0.15s;
+		}
+
+		.back-link:hover {
+			background: var(--ink);
+			color: var(--bg);
+			border-color: var(--ink);
+		}
+
+		.class-select {
+			display: flex;
+			gap: 0.5rem;
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 0.8rem;
+		}
+
+		.class-select a {
+			padding: 0.35rem 0.75rem;
+			border: 1px solid var(--line);
+			border-radius: 0.25rem;
+			color: var(--muted);
+			text-decoration: none;
+			transition: all 0.15s;
+		}
+
+		.class-select a:hover {
+			border-color: var(--accent);
+			color: var(--accent);
+		}
+
+		.class-select a.active {
+			background: var(--ink);
+			color: var(--bg);
+			border-color: var(--ink);
+		}
+
+		h1 {
+			font-size: 2.5rem;
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			color: var(--ink);
+			line-height: 1;
+			user-select: none;
+			min-height: 3rem;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: color 0.15s;
+		}
+
+		.display {
+			display: none;
+			color: var(--muted);
+			opacity: 0.6;
+		}
+
+		.display.rolling {
+			display: block;
+			color: var(--muted);
+		}
+
+		.display.result {
+			display: block;
+			color: var(--accent);
+			animation: appear 0.3s ease-out;
+		}
+
+		@keyframes appear {
+			from {
+				transform: scale(0.8);
+				opacity: 0;
+			}
+			to {
+				transform: scale(1);
+				opacity: 1;
+			}
+		}
+
+		.btn-tirage {
+			padding: 1rem 2rem;
+			border: none;
+			border-radius: 0.25rem;
+			cursor: pointer;
+			font-family: 'EB Garamond', Georgia, serif;
+			font-size: 1.25rem;
+			font-weight: 700;
+			background: var(--ink);
+			color: var(--bg);
+			transition: all 0.15s;
+		}
+
+		.btn-tirage:hover {
+			background: var(--accent);
+			transform: translateY(-2px);
+		}
+
+		.btn-tirage:active {
+			transform: translateY(0px);
+		}
+
+		.btn-tirage:disabled {
+			opacity: 0.4;
+			cursor: not-allowed;
+			transform: none;
+		}
+
+		.options {
+			display: flex;
+			gap: 2rem;
+			align-items: center;
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 0.875rem;
+			color: var(--muted);
+		}
+
+		.options label {
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
+
+		.history {
+			width: 100%;
+			max-width: 800px;
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 0.5rem;
+			padding: 1.5rem;
+		}
+
+		.history-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 1rem;
+		}
+
+		.history-title {
+			font-size: 0.75rem;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			color: var(--muted);
+			font-family: 'JetBrains Mono', monospace;
+		}
+
+		.clear-btn {
+			background: none;
+			border: none;
+			color: var(--muted);
+			cursor: pointer;
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 0.75rem;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+		}
+
+		.clear-btn:hover {
+			color: var(--accent);
+		}
+
+		.history-list {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.75rem;
+			min-height: 2rem;
+		}
+
+		.history-item {
+			padding: 0.5rem 1rem;
+			background: var(--bg);
+			border: 1px solid var(--line);
+			border-radius: 0.25rem;
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 0.875rem;
+			color: var(--ink);
+		}
+
+		.history-empty {
+			color: var(--muted);
+			font-style: italic;
+			font-size: 0.875rem;
+		}
+
+		.counter {
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 0.75rem;
+			color: var(--muted);
+		}
+
+		.hint {
+			font-size: 0.75rem;
+			color: var(--muted);
+			font-family: 'JetBrains Mono', monospace;
+		}
+	</style>
+</head>
+<body>
+	<div class="top-bar">
+		<span>jlp <span style="color:var(--accent)">Maths</span> Tools — Tirage élève (<span id="classe-label">…</span>)</span>
+		<a href="index.html" class="back-link">← Tableau de bord</a>
+	</div>
+
+	<div class="class-select" id="class-select"></div>
+
+	<div>
+		<div class="display" id="display">?</div>
+		<button class="btn-tirage" id="btn-tirage" onclick="tirage()">Tirer</button>
+	</div>
+
+	<div class="options">
+		<label>
+			<input type="checkbox" id="noRepeat" checked>
+			Ne pas retirer un élève déjà interrogé
+		</label>
+		<span class="counter"><span id="counter">0</span></span>
+	</div>
+
+	<div>
+		<div class="history">
+			<div class="history-header">
+				<span class="history-title">Élèves déjà tirés</span>
+				<button class="clear-btn" onclick="clearHistory()">Réinitialiser</button>
+			</div>
+			<div class="history-list" id="history-list">
+				<span class="history-empty">Aucun tirage pour l'instant.</span>
+			</div>
+		</div>
+	</div>
+
+	<div class="hint">Appuyer sur Espace pour tirer</div>
+
+	<script>
+		// Classe demandée via l'URL, ex : tirage-eleve.html?classe=4eme
+		const params = new URLSearchParams(window.location.search);
+		const classeParam = params.get('classe') || '4eme';
+
+		const CLASS_LABELS = {
+			'4eme': '4ème',
+			'1ere': '1ère',
+			'terminale': 'Terminale'
+		};
+
+		let eleves = []; // tableau d'objets { nom, id } pour gérer les homonymes
+		let allClasses = {};
+
+		const display = document.getElementById('display');
+		const historyList = document.getElementById('history-list');
+		const counter = document.getElementById('counter');
+		const noRepeat = document.getElementById('noRepeat');
+		const btnTirage = document.getElementById('btn-tirage');
+		const classeLabel = document.getElementById('classe-label');
+		const classSelect = document.getElementById('class-select');
+
+		let drawnIds = []; // on stocke des index (uniques) plutôt que des noms, pour gérer les homonymes
+
+		function loadClasse(classe) {
+			eleves = (allClasses[classe] || []).map((nom, i) => ({ nom, id: classe + '-' + i }));
+			classeLabel.textContent = CLASS_LABELS[classe] || classe;
+			drawnIds = [];
+			display.className = 'display';
+			display.textContent = '?';
+			btnTirage.disabled = eleves.length === 0;
+			if (eleves.length === 0) {
+				display.textContent = '⚠️ Aucun élève';
+			}
+			renderClassSelect(classe);
+			renderHistory();
+		}
+
+		function renderClassSelect(current) {
+			classSelect.innerHTML = Object.keys(allClasses).map(c => {
+				const active = c === current ? ' active' : '';
+				return `<a class="${active.trim()}" href="tirage-eleve.html?classe=${c}">${CLASS_LABELS[c] || c}</a>`;
+			}).join('');
+		}
+
+		// Charger les données depuis students-data.json
+		fetch('students-data.json')
+			.then(response => response.json())
+			.then(data => {
+				allClasses = data;
+				loadClasse(classeParam);
+			})
+			.catch(error => {
+				console.error('Erreur lors du chargement des données:', error);
+				display.className = 'display result';
+				display.textContent = '⚠️ Erreur de chargement';
+			});
+
+		function tirage() {
+			let pool = noRepeat.checked
+				? eleves.filter(e => !drawnIds.includes(e.id))
+				: eleves;
+
+			if (pool.length === 0) {
+				if (confirm('Tous les élèves ont été tirés ! Réinitialiser ?')) {
+					drawnIds = [];
+					renderHistory();
+				}
+				return;
+			}
+
+			display.className = 'display rolling';
+
+			const start = Date.now();
+			const interval = setInterval(() => {
+				display.textContent = pool[Math.floor(Math.random() * pool.length)].nom;
+				if (Date.now() - start > 700) {
+					clearInterval(interval);
+
+					const result = pool[Math.floor(Math.random() * pool.length)];
+					display.textContent = result.nom;
+					display.className = 'display result';
+
+					drawnIds.push(result.id);
+					renderHistory();
+				}
+			});
+		}
+
+		function renderHistory() {
+			counter.textContent = drawnIds.length + '/' + eleves.length + ' tirés';
+
+			if (drawnIds.length === 0) {
+				historyList.innerHTML = '<span class="history-empty">Aucun tirage pour l\'instant.</span>';
+				return;
+			}
+
+			historyList.innerHTML = drawnIds
+				.map(id => {
+					const e = eleves.find(e => e.id === id);
+					return `<span class="history-item">${e ? e.nom : '?'}</span>`;
+				})
+				.join('');
+		}
+
+		function clearHistory() {
+			drawnIds = [];
+			display.className = 'display';
+			display.textContent = '?';
+			renderHistory();
+		}
+
+		// Touche Espace pour tirer
+		document.addEventListener('keydown', (e) => {
+			if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+				e.preventDefault();
+				tirage();
+			}
+		});
+	</script>
+</body>
+</html>
