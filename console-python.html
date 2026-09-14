@@ -183,6 +183,7 @@
   .out-echo { color: var(--muted); }
   .out-note { color: var(--muted); font-style: italic; }
   .out-ok   { color: var(--ok); }
+  .out-repr { color: #2b5f86; }
   #console img {
     max-width: 100%;
     display: block;
@@ -489,9 +490,26 @@
         );
       }
 
-      await pyodide.runPythonAsync(code);
+      // Comme dans l'interpréteur Python, si la dernière ligne est une
+      // expression, sa valeur est affichée automatiquement (sauf None).
+      pyodide.globals.set("_jlp_src", code);
+      var outcome = await pyodide.runPythonAsync("await _jlp_run(_jlp_src)");
 
-      if (usesPlot) {
+      var kind = null, payload = "";
+      if (outcome) {
+        var pair = outcome.toJs ? outcome.toJs() : outcome;
+        kind = pair[0];
+        payload = pair[1];
+        if (outcome.destroy) outcome.destroy();
+      }
+
+      if (kind === "err") {
+        append("\n" + payload + "\n", "out-err");
+      } else if (kind === "val") {
+        append(payload + "\n", "out-repr");
+      }
+
+      if (usesPlot && kind !== "err") {
         var figures = await pyodide.runPythonAsync(
           "import io, base64\n" +
           "import matplotlib.pyplot as _plt\n" +
@@ -603,7 +621,39 @@
     "import builtins\n" +
     "def _jlp_input(prompt=''):\n" +
     "    return _jlp_ask_input(str(prompt))\n" +
-    "builtins.input = _jlp_input\n";
+    "builtins.input = _jlp_input\n" +
+    "\n" +
+    "from pyodide.code import eval_code_async as _jlp_eval\n" +
+    "\n" +
+    // Traceback nettoyé : on retire les rouages internes de Pyodide pour ne
+    // garder que les lignes du programme de l'élève.
+    "def _jlp_trace(_e):\n" +
+    "    import traceback as _t\n" +
+    "    _start = _cur = _e.__traceback__\n" +
+    "    while _cur is not None:\n" +
+    "        _c = _cur.tb_frame.f_code\n" +
+    "        if _c.co_name == '_jlp_run' or 'pyodide' in _c.co_filename:\n" +
+    "            _start = _cur.tb_next\n" +
+    "        _cur = _cur.tb_next\n" +
+    "    _out = []\n" +
+    "    _entries = _t.extract_tb(_start) if _start is not None else []\n" +
+    "    if _entries:\n" +
+    "        _out.append('Traceback (appel le plus récent en dernier) :\\n')\n" +
+    "        _out.extend(_t.format_list(_entries))\n" +
+    "    _out.extend(_t.format_exception_only(type(_e), _e))\n" +
+    "    return ''.join(_out).rstrip()\n" +
+    "\n" +
+    // Exécute le programme et renvoie ['val', repr(...)] quand la dernière
+    // ligne est une expression dont la valeur n'est pas None, comme le fait
+    // l'interpréteur Python classique.
+    "async def _jlp_run(_src):\n" +
+    "    try:\n" +
+    "        _res = await _jlp_eval(_src, globals(), filename='<programme>')\n" +
+    "    except BaseException as _e:\n" +
+    "        if '__JLP_ANNULE__' in str(_e):\n" +
+    "            raise\n" +
+    "        return ['err', _jlp_trace(_e)]\n" +
+    "    return None if _res is None else ['val', repr(_res)]\n";
 
   editor.value = loadCode();
 
