@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Évaluation</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+  :root { --bg:#f5f6fa; --card:#fff; --ink:#1f2430; --mute:#6b7280; --acc:#2f5bd8; --line:#dfe3ec; --ok:#1c7c4a; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171f; --card:#1d212c; --ink:#e7e9ee; --mute:#9aa1b0; --acc:#7da0ff; --line:#2f3545; --ok:#5fd19a; --err:#ff8a80; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:20px 16px 80px; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin:14px 0; }
+  .mute { color:var(--mute); }
+  input[type=text] { font-size:1.4rem; width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); letter-spacing:.1em; }
+  button { font:inherit; font-weight:600; padding:11px 20px; border:0; border-radius:8px; background:var(--acc); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .q-num { font-size:.85rem; color:var(--mute); margin-bottom:4px; }
+  .q-text { margin-bottom:10px; font-weight:600; }
+  label.choice { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin:6px 0; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+  label.choice:has(input:checked) { border-color:var(--acc); background:color-mix(in srgb, var(--acc) 10%, transparent); }
+  label.choice input { margin-top:5px; flex:none; }
+  .c-body { display:flex; flex-direction:column; gap:6px; min-width:0; flex:1; }
+  .q-img { display:block; max-width:100%; max-height:320px; margin:4px auto 12px; border-radius:6px; background:#fff; }
+  .c-img { display:block; max-width:100%; max-height:200px; border-radius:6px; background:#fff; }
+  .choices.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; }
+  .choices.grid label.choice { margin:0; }
+  .hint { font-size:.85rem; color:var(--mute); margin-top:6px; }
+  #bar { position:sticky; top:0; background:var(--bg); padding:8px 0; z-index:5; font-size:.9rem; color:var(--mute); }
+  .msg { padding:14px; border-radius:8px; border:1px solid var(--line); }
+  .msg.err { color:var(--err); border-color:var(--err); }
+  .msg.ok { color:var(--ok); border-color:var(--ok); }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Évaluation</h1>
+  <div id="status" class="mute">Chargement…</div>
+
+  <section id="login" class="card" hidden>
+    <div id="codeBox" hidden>
+      <p>Code du QCM (donné par ton professeur) :</p>
+      <input id="code" type="text" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="ex : 1spe-deriv-1">
+    </div>
+    <p>Ton identifiant numérique :</p>
+    <input id="sid" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off" placeholder="Ton identifiant">
+    <p class="hint">Les questions et les propositions sont présentées dans un ordre propre à chaque élève. Une fois envoyées, tes réponses ne peuvent plus être modifiées.</p>
+    <p><button id="start">Commencer</button></p>
+  </section>
+
+  <section id="quiz" hidden>
+    <div id="bar"></div>
+    <div id="questions"></div>
+    <p><button id="send">Envoyer mes réponses</button></p>
+  </section>
+
+  <section id="done" class="msg ok" hidden>
+    <strong>Réponses envoyées.</strong> Tu peux fermer cette page.
+  </section>
+</main>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script>
+// ====== À ADAPTER : URL de ton Worker ======
+const API = "https://qcm-maths-jlp.VOTRE-SOUS-DOMAINE.workers.dev";
+// ===========================================
+
+const $ = (id) => document.getElementById(id);
+const quizFromUrl = (new URLSearchParams(location.search).get("q") || "").trim();
+let quizId = quizFromUrl;
+let quiz = null, studentId = "", order = [], answers = {}, sent = false;
+
+// --- mélange déterministe (même ordre si l'élève recharge la page) ---
+function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shuffle(arr, rand) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function store(k, v) { try { v === undefined ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function load(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch (e) { return null; } }
+const skey = () => `qcm:${quizId}:${studentId}`;
+
+function setStatus(text, cls) { const s = $("status"); s.textContent = text; s.className = cls ? "msg " + cls : "mute"; s.hidden = !text; }
+
+// Charge un QCM ; renvoie null si OK, sinon un message d'erreur
+async function fetchQuiz(id) {
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(id)) return "Code du QCM invalide.";
+  try {
+    const r = await fetch(`${API}/api/quiz/${encodeURIComponent(id)}`);
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 403) return "Ce QCM n'est pas ouvert pour le moment.";
+    if (!r.ok) return "QCM introuvable : vérifie le code.";
+    quiz = data; quizId = id; document.title = quiz.title; $("title").textContent = quiz.title;
+    return null;
+  } catch (e) { return "Connexion impossible. Vérifie ta connexion internet."; }
+}
+
+async function init() {
+  if (!quizFromUrl) {           // arrivée par le bouton du site : on demande le code
+    setStatus(""); $("codeBox").hidden = false; $("login").hidden = false; $("code").focus(); return;
+  }
+  const err = await fetchQuiz(quizFromUrl);
+  if (err) return setStatus(err, "err");
+  setStatus(""); $("login").hidden = false; $("sid").focus();
+}
+
+// Image : chemin relatif à cette page (ex. "qcm-img/courbe.svg"), URL https ou data:image/...
+function makeImg(src, cls) {
+  const img = document.createElement("img");
+  img.src = src; img.alt = ""; img.className = cls; img.loading = "eager"; img.draggable = false;
+  img.addEventListener("error", () => { const s = document.createElement("span"); s.className = "hint"; s.textContent = "⚠ Image indisponible — préviens ton professeur."; img.replaceWith(s); });
+  return img;
+}
+
+function render() {
+  const rand = rng(hash(quizId + ":" + studentId));
+  const qs = shuffle(quiz.questions, rand).map((q) => ({ ...q, choices: shuffle(q.choices, rand) }));
+  const box = $("questions"); box.innerHTML = "";
+  qs.forEach((q, i) => {
+    const card = document.createElement("div"); card.className = "card";
+    const n = document.createElement("div"); n.className = "q-num"; n.textContent = `Question ${i + 1} / ${qs.length}`;
+    const t = document.createElement("div"); t.className = "q-text"; t.textContent = q.text;
+    card.append(n, t);
+    if (q.image) card.append(makeImg(q.image, "q-img"));
+    const list = document.createElement("div");
+    list.className = "choices" + (q.choices.some((c) => c.image) ? " grid" : "");
+    card.append(list);
+    q.choices.forEach((c) => {
+      const lab = document.createElement("label"); lab.className = "choice";
+      const inp = document.createElement("input"); inp.type = q.multiple ? "checkbox" : "radio"; inp.name = q.id; inp.value = c.id;
+      inp.checked = (answers[q.id] || []).includes(c.id);
+      inp.addEventListener("change", () => {
+        const sel = [...card.querySelectorAll("input:checked")].map((x) => x.value);
+        answers[q.id] = sel; store(skey(), answers); updateBar();
+      });
+      const body = document.createElement("div"); body.className = "c-body";
+      if (c.text) { const sp = document.createElement("span"); sp.textContent = c.text; body.append(sp); }
+      if (c.image) body.append(makeImg(c.image, "c-img"));
+      lab.append(inp, body); list.append(lab);
+    });
+    if (q.multiple) { const h = document.createElement("div"); h.className = "hint"; h.textContent = "Plusieurs réponses possibles."; card.append(h); }
+    box.append(card);
+  });
+  if (window.renderMathInElement) {
+    renderMathInElement(box, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }, { left: "\\(", right: "\\)", display: false }, { left: "\\[", right: "\\]", display: true }] });
+  }
+  updateBar();
+}
+
+function updateBar() {
+  const done = quiz.questions.filter((q) => (answers[q.id] || []).length > 0).length;
+  $("bar").textContent = `ID ${studentId} · ${done} / ${quiz.questions.length} questions répondues`;
+}
+
+$("start").addEventListener("click", async () => {
+  const v = $("sid").value.trim();
+  if (!quiz) {
+    const code = $("code").value.trim();
+    if (!code) { alert("Saisis le code du QCM."); return; }
+    if (!/^[0-9]{1,12}$/.test(v)) { alert("L'identifiant doit contenir uniquement des chiffres."); return; }
+    $("start").disabled = true;
+    const err = await fetchQuiz(code);
+    $("start").disabled = false;
+    if (err) { alert(err); return; }
+  }
+  if (!/^[0-9]{1,12}$/.test(v)) { alert("L'identifiant doit contenir uniquement des chiffres."); return; }
+  studentId = v; answers = load(skey()) || {};
+  setStatus("");
+  $("login").hidden = true; $("quiz").hidden = false; render(); window.scrollTo(0, 0);
+});
+$("sid").addEventListener("keydown", (e) => { if (e.key === "Enter") $("start").click(); });
+$("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("sid").focus(); });
+
+$("send").addEventListener("click", async () => {
+  if (sent) return;
+  const missing = quiz.questions.filter((q) => !(answers[q.id] || []).length).length;
+  if (missing && !confirm(`${missing} question(s) sans réponse. Envoyer quand même ?`)) return;
+  if (!missing && !confirm("Envoyer définitivement tes réponses ?")) return;
+  $("send").disabled = true;
+  try {
+    const r = await fetch(`${API}/api/quiz/${encodeURIComponent(quizId)}/submit`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId, answers }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) { sent = true; store(skey(), undefined); $("quiz").hidden = true; $("done").hidden = false; window.scrollTo(0, 0); return; }
+    if (r.status === 409) alert("Une copie a déjà été envoyée avec cet identifiant. Préviens ton professeur si ce n'est pas la tienne.");
+    else if (r.status === 403) alert("L'évaluation est fermée : tes réponses n'ont pas pu être envoyées. Préviens ton professeur.");
+    else alert(data.error || "Erreur d'envoi. Réessaie.");
+  } catch (e) { alert("Connexion impossible : tes réponses sont conservées, réessaie dans un instant."); }
+  $("send").disabled = false;
+});
+
+init();
+</script>
+</body>
+</html>

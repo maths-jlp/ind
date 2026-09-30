@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Évaluation — espace professeur</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --bg:#f5f6fa; --card:#fff; --ink:#1f2430; --mute:#6b7280; --acc:#2f5bd8; --line:#dfe3ec; --ok:#1c7c4a; --err:#b3261e; --warn:#b26a00; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171f; --card:#1d212c; --ink:#e7e9ee; --mute:#9aa1b0; --acc:#7da0ff; --line:#2f3545; --ok:#5fd19a; --err:#ff8a80; --warn:#ffb74d; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:980px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:1.4rem; margin:0 0 12px; }
+  h2 { font-size:1.05rem; margin:0 0 10px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:14px 0; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  input[type=text], input[type=password], textarea { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); }
+  textarea { width:100%; min-height:90px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; }
+  button { font:inherit; font-weight:600; padding:8px 14px; border:0; border-radius:8px; background:var(--acc); color:#fff; cursor:pointer; }
+  button.sec { background:transparent; color:var(--acc); border:1px solid var(--acc); }
+  button.danger { background:var(--err); }
+  .mute { color:var(--mute); font-size:.9rem; }
+  .pill { display:inline-block; padding:2px 10px; border-radius:99px; font-size:.85rem; font-weight:600; }
+  .pill.open { background:color-mix(in srgb,var(--ok) 18%,transparent); color:var(--ok); }
+  .pill.closed { background:color-mix(in srgb,var(--err) 18%,transparent); color:var(--err); }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; }
+  th, td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:center; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  .wrap { overflow-x:auto; }
+  .y { color:var(--ok); font-weight:700; } .n { color:var(--err); font-weight:700; }
+  code { background:var(--bg); padding:1px 5px; border-radius:4px; word-break:break-all; }
+  #msg { min-height:1.4em; margin:8px 0; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Évaluation en ligne — espace professeur</h1>
+  <div id="msg" class="mute"></div>
+
+  <section class="card">
+    <h2>1. Connexion</h2>
+    <div class="row">
+      <input id="token" type="password" placeholder="Mot de passe professeur (ADMIN_TOKEN)" size="32">
+      <input id="quizId" type="text" placeholder="Identifiant du QCM (ex : 4e-thales-1)" size="28">
+      <button id="btnConnect">Charger</button>
+    </div>
+    <p class="mute">Le mot de passe est gardé uniquement le temps de l'onglet (il n'est jamais enregistré sur le site).</p>
+  </section>
+
+  <section class="card">
+    <h2>2. Déposer ou remplacer le QCM</h2>
+    <div class="row"><input id="file" type="file" accept=".json,application/json"><span class="mute">ou coller le JSON ci-dessous</span></div>
+    <textarea id="json" placeholder='{"title":"...","questions":[...]}'></textarea>
+    <p class="row"><button id="btnUpload">Envoyer le QCM</button>
+    <span class="mute">Remplacer un QCM conserve les copies déjà reçues : ne le modifie pas pendant une évaluation.</span></p>
+  </section>
+
+  <section class="card">
+    <h2>3. Session</h2>
+    <div class="row">
+      <span id="state" class="pill closed">—</span>
+      <button id="btnOpen">Ouvrir</button>
+      <button id="btnClose" class="sec">Fermer</button>
+    </div>
+    <p class="mute">Lien à donner aux élèves :<br><code id="link">—</code> <button id="btnCopy" class="sec" style="padding:2px 10px">Copier</button></p>
+  </section>
+
+  <section class="card">
+    <h2>4. Résultats <span id="count" class="mute"></span></h2>
+    <div class="row">
+      <button id="btnRefresh" class="sec">Actualiser</button>
+      <button id="btnExport">Télécharger l'Excel</button>
+      <button id="btnDelQuiz" class="danger">Supprimer ce QCM et ses copies</button>
+    </div>
+    <div class="wrap"><table id="tbl"></table></div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ====== À ADAPTER : URL de ton Worker et URL publique de eval.html ======
+const API = "https://qcm-maths-jlp.VOTRE-SOUS-DOMAINE.workers.dev";
+const EVAL_PAGE = "https://maths-jlp.github.io/ind/eval.html";
+// =======================================================================
+
+const $ = (id) => document.getElementById(id);
+let results = null;
+
+try { $("token").value = sessionStorage.getItem("qcm-token") || ""; $("quizId").value = sessionStorage.getItem("qcm-quiz") || ""; } catch (e) {}
+
+function msg(t, cls) { const m = $("msg"); m.textContent = t; m.style.color = cls === "err" ? "var(--err)" : cls === "ok" ? "var(--ok)" : "var(--mute)"; }
+const qid = () => $("quizId").value.trim();
+function api(path, opt = {}) {
+  return fetch(API + "/api/admin/quiz/" + encodeURIComponent(qid()) + path, {
+    ...opt, headers: { Authorization: "Bearer " + $("token").value, "Content-Type": "application/json" },
+  }).then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Erreur " + r.status); return d; });
+}
+function setState(open) { const s = $("state"); s.textContent = open ? "Ouverte" : "Fermée"; s.className = "pill " + (open ? "open" : "closed"); }
+function updateLink() { $("link").textContent = qid() ? `${EVAL_PAGE}?q=${encodeURIComponent(qid())}` : "—"; }
+
+function paris(iso) { return new Date(iso).toLocaleString("fr-FR", { timeZone: "Europe/Paris", hour12: false }); }
+
+function renderTable() {
+  const t = $("tbl"); t.innerHTML = "";
+  if (!results) return;
+  $("count").textContent = `(${results.submissions.length} copie${results.submissions.length > 1 ? "s" : ""})`;
+  const head = "<tr><th>ID</th><th>Note /20</th><th>Heure</th>" + results.questions.map((q) => `<th>${q.id}</th>`).join("") + "<th></th></tr>";
+  const rows = results.submissions.map((s) =>
+    `<tr><td>${s.studentId}</td><td><b>${s.note20}</b></td><td>${paris(s.at).split(" ")[1] || ""}</td>` +
+    results.questions.map((q) => s.detail[q.id] ? '<td class="y">✓</td>' : '<td class="n">✗</td>').join("") +
+    `<td><button class="sec" style="padding:1px 8px" data-del="${s.studentId}">Suppr.</button></td></tr>`).join("");
+  const n = results.submissions.length;
+  const foot = n ? "<tr><td><b>Réussite</b></td><td></td><td></td>" + results.questions.map((q) =>
+    `<td>${Math.round(100 * results.submissions.filter((s) => s.detail[q.id]).length / n)} %</td>`).join("") + "<td></td></tr>" : "";
+  t.innerHTML = head + rows + foot;
+  t.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm(`Supprimer la copie de l'ID ${b.dataset.del} ? (l'élève pourra la refaire)`)) return;
+    try { await api("/sub/" + b.dataset.del, { method: "DELETE" }); await refresh(); } catch (e) { msg(e.message, "err"); }
+  }));
+}
+
+async function refresh() {
+  try { results = await api("/results"); setState(results.open); renderTable(); msg("Données à jour.", "ok"); }
+  catch (e) { results = null; renderTable(); msg(e.message === "QCM introuvable" ? "QCM introuvable : dépose-le à l'étape 2." : e.message, "err"); }
+}
+
+$("btnConnect").addEventListener("click", () => {
+  try { sessionStorage.setItem("qcm-token", $("token").value); sessionStorage.setItem("qcm-quiz", qid()); } catch (e) {}
+  updateLink(); refresh();
+});
+$("quizId").addEventListener("input", updateLink);
+$("file").addEventListener("change", async (e) => { const f = e.target.files[0]; if (f) $("json").value = await f.text(); });
+
+$("btnUpload").addEventListener("click", async () => {
+  let body; try { body = JSON.parse($("json").value); } catch (e) { return msg("JSON invalide : " + e.message, "err"); }
+  try { const d = await api("", { method: "PUT", body: JSON.stringify(body) }); msg(`QCM enregistré (${d.questions} questions).`, "ok"); await refresh(); }
+  catch (e) { msg(e.message, "err"); }
+});
+$("btnOpen").addEventListener("click", async () => { try { await api("/open", { method: "POST" }); await refresh(); } catch (e) { msg(e.message, "err"); } });
+$("btnClose").addEventListener("click", async () => { try { await api("/close", { method: "POST" }); await refresh(); } catch (e) { msg(e.message, "err"); } });
+$("btnRefresh").addEventListener("click", refresh);
+$("btnCopy").addEventListener("click", () => { navigator.clipboard && navigator.clipboard.writeText($("link").textContent); msg("Lien copié.", "ok"); });
+$("btnDelQuiz").addEventListener("click", async () => {
+  if (!confirm("Supprimer définitivement ce QCM ET toutes les copies ? Pense à télécharger l'Excel avant.")) return;
+  try { await api("", { method: "DELETE" }); results = null; renderTable(); setState(false); msg("QCM supprimé.", "ok"); } catch (e) { msg(e.message, "err"); }
+});
+
+$("btnExport").addEventListener("click", () => {
+  if (!results || !results.submissions.length) return msg("Aucune copie à exporter.", "err");
+  const qs = results.questions, subs = results.submissions;
+  const aoa = [["ID", "Note /20", "Score", "Score max", "Heure de soumission", ...qs.map((q) => q.id)]];
+  subs.forEach((s) => aoa.push([Number(s.studentId), s.note20, s.score, s.max, paris(s.at), ...qs.map((q) => s.detail[q.id] ? 1 : 0)]));
+  aoa.push([]);
+  aoa.push(["Taux de réussite", "", "", "", "", ...qs.map((q) => subs.filter((s) => s.detail[q.id]).length / subs.length)]);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // format % pour la dernière ligne
+  const last = aoa.length - 1;
+  qs.forEach((_, j) => { const c = XLSX.utils.encode_cell({ r: last, c: 5 + j }); if (ws[c]) ws[c].z = "0%"; });
+  ws["!cols"] = [{ wch: 14 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 20 }, ...qs.map(() => ({ wch: 8 }))];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Notes");
+  XLSX.writeFile(wb, `${qid()}_notes.xlsx`);
+  msg("Fichier Excel téléchargé.", "ok");
+});
+
+updateLink();
+if ($("token").value && qid()) refresh();
+</script>
+</body>
+</html>
