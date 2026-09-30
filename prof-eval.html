@@ -78,6 +78,16 @@
     </div>
     <div class="wrap"><table id="tbl"></table></div>
   </section>
+
+  <section class="card">
+    <h2>5. Liste des élèves <span class="mute">(une fois pour l'année)</span></h2>
+    <p class="mute">Fichier <code>eleves-codes.json</code> : un code fixe par élève, valable pour tous les QCM. Une fois la liste déposée, tout code absent est refusé et l'Excel affiche la classe et le prénom.</p>
+    <div class="row">
+      <input id="rosterFile" type="file" accept=".json,application/json">
+      <button id="btnRoster">Envoyer la liste</button>
+      <span id="rosterInfo" class="mute">—</span>
+    </div>
+  </section>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -99,6 +109,16 @@ function api(path, opt = {}) {
     ...opt, headers: { Authorization: "Bearer " + $("token").value, "Content-Type": "application/json" },
   }).then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Erreur " + r.status); return d; });
 }
+function rosterApi(opt = {}) {
+  return fetch(API + "/api/admin/roster", {
+    ...opt, headers: { Authorization: "Bearer " + $("token").value, "Content-Type": "application/json" },
+  }).then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Erreur " + r.status); return d; });
+}
+async function loadRoster() {
+  try { const d = await rosterApi(); $("rosterInfo").textContent = d.count ? `${d.count} élèves enregistrés` : "Aucune liste déposée (tous les codes sont acceptés)"; }
+  catch (e) { $("rosterInfo").textContent = "—"; }
+}
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function setState(open) { const s = $("state"); s.textContent = open ? "Ouverte" : "Fermée"; s.className = "pill " + (open ? "open" : "closed"); }
 function updateLink() { $("link").textContent = qid() ? `${EVAL_PAGE}?q=${encodeURIComponent(qid())}` : "—"; }
 
@@ -108,13 +128,13 @@ function renderTable() {
   const t = $("tbl"); t.innerHTML = "";
   if (!results) return;
   $("count").textContent = `(${results.submissions.length} copie${results.submissions.length > 1 ? "s" : ""})`;
-  const head = "<tr><th>ID</th><th>Note /20</th><th>Heure</th>" + results.questions.map((q) => `<th>${q.id}</th>`).join("") + "<th></th></tr>";
+  const head = "<tr><th>Code</th><th>Classe</th><th>Prénom</th><th>Note /20</th><th>Heure</th>" + results.questions.map((q) => `<th>${esc(q.id)}</th>`).join("") + "<th></th></tr>";
   const rows = results.submissions.map((s) =>
-    `<tr><td>${s.studentId}</td><td><b>${s.note20}</b></td><td>${paris(s.at).split(" ")[1] || ""}</td>` +
+    `<tr><td>${esc(s.studentId)}</td><td>${esc(s.classe)}</td><td>${esc(s.prenom)}</td><td><b>${s.note20}</b></td><td>${paris(s.at).split(" ")[1] || ""}</td>` +
     results.questions.map((q) => s.detail[q.id] ? '<td class="y">✓</td>' : '<td class="n">✗</td>').join("") +
     `<td><button class="sec" style="padding:1px 8px" data-del="${s.studentId}">Suppr.</button></td></tr>`).join("");
   const n = results.submissions.length;
-  const foot = n ? "<tr><td><b>Réussite</b></td><td></td><td></td>" + results.questions.map((q) =>
+  const foot = n ? "<tr><td><b>Réussite</b></td><td></td><td></td><td></td><td></td>" + results.questions.map((q) =>
     `<td>${Math.round(100 * results.submissions.filter((s) => s.detail[q.id]).length / n)} %</td>`).join("") + "<td></td></tr>" : "";
   t.innerHTML = head + rows + foot;
   t.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
@@ -130,7 +150,14 @@ async function refresh() {
 
 $("btnConnect").addEventListener("click", () => {
   try { sessionStorage.setItem("qcm-token", $("token").value); sessionStorage.setItem("qcm-quiz", qid()); } catch (e) {}
-  updateLink(); refresh();
+  updateLink(); loadRoster(); if (qid()) refresh(); else msg("Connecté.", "ok");
+});
+$("btnRoster").addEventListener("click", async () => {
+  const f = $("rosterFile").files[0];
+  if (!f) return msg("Choisis d'abord le fichier eleves-codes.json.", "err");
+  let body; try { body = JSON.parse(await f.text()); } catch (e) { return msg("JSON invalide : " + e.message, "err"); }
+  try { const d = await rosterApi({ method: "PUT", body: JSON.stringify(body) }); msg(`Liste enregistrée (${d.count} élèves).`, "ok"); loadRoster(); if (results) refresh(); }
+  catch (e) { msg(e.message, "err"); }
 });
 $("quizId").addEventListener("input", updateLink);
 $("file").addEventListener("change", async (e) => { const f = e.target.files[0]; if (f) $("json").value = await f.text(); });
@@ -152,15 +179,15 @@ $("btnDelQuiz").addEventListener("click", async () => {
 $("btnExport").addEventListener("click", () => {
   if (!results || !results.submissions.length) return msg("Aucune copie à exporter.", "err");
   const qs = results.questions, subs = results.submissions;
-  const aoa = [["ID", "Note /20", "Score", "Score max", "Heure de soumission", ...qs.map((q) => q.id)]];
-  subs.forEach((s) => aoa.push([Number(s.studentId), s.note20, s.score, s.max, paris(s.at), ...qs.map((q) => s.detail[q.id] ? 1 : 0)]));
+  const aoa = [["Code", "Classe", "Prénom", "Note /20", "Score", "Score max", "Heure de soumission", ...qs.map((q) => q.id)]];
+  subs.forEach((s) => aoa.push([Number(s.studentId), s.classe || "", s.prenom || "", s.note20, s.score, s.max, paris(s.at), ...qs.map((q) => s.detail[q.id] ? 1 : 0)]));
   aoa.push([]);
-  aoa.push(["Taux de réussite", "", "", "", "", ...qs.map((q) => subs.filter((s) => s.detail[q.id]).length / subs.length)]);
+  aoa.push(["Taux de réussite", "", "", "", "", "", "", ...qs.map((q) => subs.filter((s) => s.detail[q.id]).length / subs.length)]);
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   // format % pour la dernière ligne
   const last = aoa.length - 1;
-  qs.forEach((_, j) => { const c = XLSX.utils.encode_cell({ r: last, c: 5 + j }); if (ws[c]) ws[c].z = "0%"; });
-  ws["!cols"] = [{ wch: 14 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 20 }, ...qs.map(() => ({ wch: 8 }))];
+  qs.forEach((_, j) => { const c = XLSX.utils.encode_cell({ r: last, c: 7 + j }); if (ws[c]) ws[c].z = "0%"; });
+  ws["!cols"] = [{ wch: 8 }, { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 20 }, ...qs.map(() => ({ wch: 8 }))];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Notes");
   XLSX.writeFile(wb, `${qid()}_notes.xlsx`);
@@ -168,7 +195,7 @@ $("btnExport").addEventListener("click", () => {
 });
 
 updateLink();
-if ($("token").value && qid()) refresh();
+if ($("token").value) { loadRoster(); if (qid()) refresh(); }
 </script>
 </body>
 </html>

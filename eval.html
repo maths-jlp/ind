@@ -169,6 +169,15 @@ $("start").addEventListener("click", async () => {
     if (err) { alert(err); return; }
   }
   if (!/^[0-9]{1,12}$/.test(v)) { alert("L'identifiant doit contenir uniquement des chiffres."); return; }
+  // vérifie le code élève avant de commencer
+  $("start").disabled = true;
+  try {
+    const r = await fetch(`${API}/api/quiz/${encodeURIComponent(quizId)}/check/${v}`);
+    if (r.status === 404) { alert("Identifiant inconnu : vérifie ton code (il est sur ton étiquette)."); $("start").disabled = false; return; }
+    if (r.status === 409) { alert("Une copie a déjà été envoyée avec cet identifiant. Préviens ton professeur si ce n'est pas la tienne."); $("start").disabled = false; return; }
+    if (r.status === 403) { alert("Ce QCM n'est pas ouvert pour le moment."); $("start").disabled = false; return; }
+  } catch (e) { alert("Connexion impossible. Vérifie ta connexion internet."); $("start").disabled = false; return; }
+  $("start").disabled = false;
   studentId = v; answers = load(skey()) || {};
   setStatus("");
   $("login").hidden = true; $("quiz").hidden = false; render(); window.scrollTo(0, 0);
@@ -190,6 +199,7 @@ $("send").addEventListener("click", async () => {
     const data = await r.json().catch(() => ({}));
     if (r.ok) { sent = true; store(skey(), undefined); $("quiz").hidden = true; $("done").hidden = false; window.scrollTo(0, 0); return; }
     if (r.status === 409) alert("Une copie a déjà été envoyée avec cet identifiant. Préviens ton professeur si ce n'est pas la tienne.");
+    else if (r.status === 404 && data.error === "unknown") alert("Identifiant inconnu : tes réponses n'ont pas pu être envoyées. Préviens ton professeur.");
     else if (r.status === 403) alert("L'évaluation est fermée : tes réponses n'ont pas pu être envoyées. Préviens ton professeur.");
     else alert(data.error || "Erreur d'envoi. Réessaie.");
   } catch (e) { alert("Connexion impossible : tes réponses sont conservées, réessaie dans un instant."); }
