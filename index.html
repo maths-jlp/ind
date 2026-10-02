@@ -71,7 +71,7 @@
 
   .grid-5 {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 10px;
   }
 
@@ -125,6 +125,8 @@
 
   .tabs {
     display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
     gap: 4px;
     margin-bottom: 10px;
     border-bottom: 1px solid var(--line);
@@ -142,6 +144,31 @@
     margin-bottom: -1px;
     transition: all 0.15s;
   }
+  .tab-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-bottom: 6px;
+  }
+  .qcm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    background: var(--panel);
+    color: var(--accent);
+    font-family: 'EB Garamond', serif;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .qcm-btn:hover { background: var(--accent); color: #fff; }
+  .qcm-btn.primary { background: var(--accent); color: #fff; }
+  .qcm-btn.primary:hover { filter: brightness(1.15); }
   .tab:hover { color: var(--ink); }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
@@ -184,18 +211,6 @@
   <section class="section">
     <h2>Outils transverses</h2>
     <div class="grid-5">
-      <a href="eval.html" class="card">
-        <div class="card-icon">✅</div>
-        <div class="card-title">QCM</div>
-        <div class="card-desc">code du QCM + identifiant</div>
-        <div class="card-tag">v1</div>
-      </a>
-      <a href="entrainement.html" class="card">
-        <div class="card-icon">🔁</div>
-        <div class="card-title">Entraînement</div>
-        <div class="card-desc">rejouer les QCM · sans note</div>
-        <div class="card-tag">v1</div>
-      </a>
       <a href="visualiseur-3d.html" class="card">
         <div class="card-icon">📐</div>
         <div class="card-title">Visualiseur 3D</div>
@@ -242,6 +257,10 @@
       <button class="tab active" onclick="switchNiveau(event, '4e')">4ème</button>
       <button class="tab" onclick="switchNiveau(event, '1ere')">1ère spé</button>
       <button class="tab" onclick="switchNiveau(event, 'tle')">Terminale spé</button>
+      <div class="tab-actions">
+        <a href="eval.html" class="qcm-btn primary">✅ QCM</a>
+        <a href="entrainement.html" class="qcm-btn">🔁 Entraînement</a>
+      </div>
     </div>
 
     <div class="niveau-content active" id="niveau-4e">
