@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entraînement QCM</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+  :root { --bg:#f5f6fa; --card:#fff; --ink:#1f2430; --mute:#6b7280; --acc:#2f5bd8; --line:#dfe3ec; --ok:#1c7c4a; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171f; --card:#1d212c; --ink:#e7e9ee; --mute:#9aa1b0; --acc:#7da0ff; --line:#2f3545; --ok:#5fd19a; --err:#ff8a80; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:20px 16px 80px; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  h2 { font-size:1rem; margin:22px 0 8px; color:var(--mute); text-transform:uppercase; letter-spacing:.06em; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin:14px 0; }
+  .mute { color:var(--mute); }
+  button { font:inherit; font-weight:600; padding:11px 20px; border:0; border-radius:8px; background:var(--acc); color:#fff; cursor:pointer; }
+  button.sec { background:transparent; color:var(--acc); border:1px solid var(--acc); }
+  button:disabled { opacity:.5; cursor:default; }
+  .qz { display:block; width:100%; text-align:left; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin:8px 0; font-weight:600; }
+  .qz:hover { border-color:var(--acc); }
+  .q-num { font-size:.85rem; color:var(--mute); margin-bottom:4px; }
+  .q-text { margin-bottom:10px; font-weight:600; }
+  label.choice { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin:6px 0; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+  label.choice:has(input:checked) { border-color:var(--acc); background:color-mix(in srgb, var(--acc) 10%, transparent); }
+  label.choice input { margin-top:5px; flex:none; }
+  main label.choice.good, main label.choice.good:has(input:checked) { border:2px solid var(--ok); background:color-mix(in srgb, var(--ok) 12%, transparent); }
+  main label.choice.bad, main label.choice.bad:has(input:checked) { border:2px solid var(--err); background:color-mix(in srgb, var(--err) 12%, transparent); }
+  .c-body { display:flex; flex-direction:column; gap:6px; min-width:0; flex:1; }
+  .q-img { display:block; max-width:100%; max-height:320px; margin:4px auto 12px; border-radius:6px; background:#fff; }
+  .c-img { display:block; max-width:100%; max-height:200px; border-radius:6px; background:#fff; }
+  .choices.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; }
+  .choices.grid label.choice { margin:0; }
+  .hint { font-size:.85rem; color:var(--mute); margin-top:6px; }
+  .verdict { font-weight:700; margin-top:8px; }
+  .verdict.ok { color:var(--ok); } .verdict.ko { color:var(--err); }
+  #score { font-size:1.3rem; font-weight:700; text-align:center; padding:16px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .msg { padding:14px; border-radius:8px; border:1px solid var(--err); color:var(--err); }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Entraînement</h1>
+  <p class="mute" id="sub">Rejoue les QCM de l'année autant que tu veux. Rien n'est noté ni enregistré.</p>
+  <div id="status" class="mute">Chargement…</div>
+
+  <section id="list"></section>
+
+  <section id="quiz" hidden>
+    <div id="score" class="card" hidden></div>
+    <div id="questions"></div>
+    <div class="row">
+      <button id="check">Voir ma correction</button>
+      <button id="again" class="sec" hidden>Recommencer</button>
+      <button id="back" class="sec">Autres QCM</button>
+    </div>
+  </section>
+</main>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script>
+// ====== URL du Worker ======
+const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
+// ===========================
+const LEVELS = ["4ème", "1ère spé", "Terminale spé"];
+const $ = (id) => document.getElementById(id);
+let quiz = null, quizId = "", answers = {};
+
+function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function setStatus(t, err) { const s = $("status"); s.textContent = t; s.className = err ? "msg" : "mute"; s.hidden = !t; }
+function math(el) {
+  if (window.renderMathInElement) renderMathInElement(el, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }, { left: "\\(", right: "\\)", display: false }, { left: "\\[", right: "\\]", display: true }] });
+}
+function makeImg(src, cls) {
+  const img = document.createElement("img"); img.src = src; img.alt = ""; img.className = cls; img.draggable = false;
+  img.addEventListener("error", () => { const s = document.createElement("span"); s.className = "hint"; s.textContent = "Image indisponible."; img.replaceWith(s); });
+  return img;
+}
+
+async function showList() {
+  $("quiz").hidden = true; $("list").hidden = false; $("title").textContent = "Entraînement"; $("sub").hidden = false;
+  document.title = "Entraînement QCM"; history.replaceState(null, "", location.pathname);
+  setStatus("Chargement…");
+  try {
+    const r = await fetch(`${API}/api/practice`); const d = await r.json();
+    const box = $("list"); box.innerHTML = "";
+    if (!d.quizzes || !d.quizzes.length) { setStatus("Aucun QCM d'entraînement pour le moment."); return; }
+    setStatus("");
+    for (const lv of LEVELS) {
+      const qs = d.quizzes.filter((q) => q.level === lv);
+      if (!qs.length) continue;
+      const h = document.createElement("h2"); h.textContent = lv; box.append(h);
+      for (const q of qs) {
+        const b = document.createElement("button"); b.className = "qz"; b.textContent = q.title;
+        b.addEventListener("click", () => openQuiz(q.id)); box.append(b);
+      }
+    }
+  } catch (e) { setStatus("Connexion impossible. Vérifie ta connexion internet.", true); }
+}
+
+async function openQuiz(id) {
+  setStatus("Chargement…");
+  try {
+    const r = await fetch(`${API}/api/practice/${encodeURIComponent(id)}`);
+    const d = await r.json().catch(() => ({}));
+    if (r.status === 403) return setStatus("Ce QCM est en cours d'évaluation : l'entraînement reviendra après.", true);
+    if (!r.ok) return setStatus("Ce QCM n'est pas disponible.", true);
+    quiz = d; quizId = id; history.replaceState(null, "", `?q=${encodeURIComponent(id)}`);
+    setStatus(""); start();
+  } catch (e) { setStatus("Connexion impossible. Vérifie ta connexion internet.", true); }
+}
+
+function start() {
+  answers = {};
+  $("list").hidden = true; $("quiz").hidden = false; $("sub").hidden = true;
+  $("title").textContent = quiz.title; document.title = quiz.title;
+  $("score").hidden = true; $("check").hidden = false; $("check").disabled = false; $("again").hidden = true;
+  const qs = shuffle(quiz.questions).map((q) => ({ ...q, choices: shuffle(q.choices) }));
+  const box = $("questions"); box.innerHTML = "";
+  qs.forEach((q, i) => {
+    const card = document.createElement("div"); card.className = "card"; card.dataset.qid = q.id;
+    const n = document.createElement("div"); n.className = "q-num"; n.textContent = `Question ${i + 1} / ${qs.length}`;
+    const t = document.createElement("div"); t.className = "q-text"; t.textContent = q.text;
+    card.append(n, t);
+    if (q.image) card.append(makeImg(q.image, "q-img"));
+    const list = document.createElement("div"); list.className = "choices" + (q.choices.some((c) => c.image) ? " grid" : "");
+    card.append(list);
+    q.choices.forEach((c) => {
+      const lab = document.createElement("label"); lab.className = "choice"; lab.dataset.cid = c.id;
+      const inp = document.createElement("input"); inp.type = q.multiple ? "checkbox" : "radio"; inp.name = q.id; inp.value = c.id;
+      inp.addEventListener("change", () => { answers[q.id] = [...card.querySelectorAll("input:checked")].map((x) => x.value); });
+      const body = document.createElement("div"); body.className = "c-body";
+      if (c.text) { const sp = document.createElement("span"); sp.textContent = c.text; body.append(sp); }
+      if (c.image) body.append(makeImg(c.image, "c-img"));
+      lab.append(inp, body); list.append(lab);
+    });
+    if (q.multiple) { const h = document.createElement("div"); h.className = "hint"; h.textContent = "Plusieurs réponses possibles."; card.append(h); }
+    box.append(card);
+  });
+  math(box); window.scrollTo(0, 0);
+}
+
+$("check").addEventListener("click", async () => {
+  const missing = quiz.questions.filter((q) => !(answers[q.id] || []).length).length;
+  if (missing && !confirm(`${missing} question(s) sans réponse. Voir la correction quand même ?`)) return;
+  $("check").disabled = true;
+  try {
+    const r = await fetch(`${API}/api/practice/${encodeURIComponent(quizId)}/grade`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ answers, version: quiz.version || "" }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.status === 403) { alert("Ce QCM vient de passer en évaluation : correction indisponible pour le moment."); $("check").disabled = false; return; }
+    if (r.status === 409) { alert("Ce QCM vient d'être mis à jour par ton professeur : il va se recharger."); openQuiz(quizId); return; }
+    if (!r.ok) { alert("Erreur, réessaie."); $("check").disabled = false; return; }
+    for (const q of d.questions) {
+      const card = document.querySelector(`.card[data-qid="${CSS.escape(q.id)}"]`); if (!card) continue;
+      const mine = answers[q.id] || [];
+      card.querySelectorAll("label.choice").forEach((lab) => {
+        const cid = lab.dataset.cid;
+        if (q.correct.includes(cid)) lab.classList.add("good");
+        else if (mine.includes(cid)) lab.classList.add("bad");
+        lab.querySelector("input").disabled = true;
+      });
+      const v = document.createElement("div"); v.className = "verdict " + (q.ok ? "ok" : "ko");
+      v.textContent = q.ok ? "✓ Juste" : (mine.length ? "✗ Faux : la bonne réponse est en vert" : "✗ Pas de réponse : la bonne réponse est en vert");
+      card.append(v);
+    }
+    const s = $("score"); s.hidden = false;
+    s.textContent = `Score : ${d.score} / ${d.max}  —  ${String(d.note20).replace(".", ",")} / 20`;
+    $("check").hidden = true; $("again").hidden = false; window.scrollTo(0, 0);
+  } catch (e) { alert("Connexion impossible, réessaie."); $("check").disabled = false; }
+});
+$("again").addEventListener("click", start);
+$("back").addEventListener("click", showList);
+
+const q0 = new URLSearchParams(location.search).get("q");
+if (q0) openQuiz(q0); else showList();
+</script>
+</body>
+</html>

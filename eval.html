@@ -83,7 +83,7 @@ function shuffle(arr, rand) { const a = arr.slice(); for (let i = a.length - 1; 
 
 function store(k, v) { try { v === undefined ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function load(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch (e) { return null; } }
-const skey = () => `qcm:${quizId}:${studentId}`;
+const skey = () => `qcm:${quizId}:${(quiz && quiz.version) || ''}:${studentId}`;
 
 function setStatus(text, cls) { const s = $("status"); s.textContent = text; s.className = cls ? "msg " + cls : "mute"; s.hidden = !text; }
 
@@ -194,10 +194,11 @@ $("send").addEventListener("click", async () => {
   try {
     const r = await fetch(`${API}/api/quiz/${encodeURIComponent(quizId)}/submit`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId, answers }),
+      body: JSON.stringify({ studentId, answers, version: quiz.version || "" }),
     });
     const data = await r.json().catch(() => ({}));
     if (r.ok) { sent = true; store(skey(), undefined); $("quiz").hidden = true; $("done").hidden = false; window.scrollTo(0, 0); return; }
+    if (r.status === 409 && data.error === "stale") { alert("Le QCM a été mis à jour par ton professeur pendant que tu répondais. La page va se recharger : refais tes réponses."); location.reload(); return; }
     if (r.status === 409) alert("Une copie a déjà été envoyée avec cet identifiant. Préviens ton professeur si ce n'est pas la tienne.");
     else if (r.status === 404 && data.error === "unknown") alert("Identifiant inconnu : tes réponses n'ont pas pu être envoyées. Préviens ton professeur.");
     else if (r.status === 403) alert("L'évaluation est fermée : tes réponses n'ont pas pu être envoyées. Préviens ton professeur.");

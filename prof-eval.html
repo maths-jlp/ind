@@ -17,7 +17,7 @@
   h2 { font-size:1.05rem; margin:0 0 10px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:14px 0; }
   .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-  input[type=text], input[type=password], textarea { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); }
+  input[type=text], input[type=password], textarea, select { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); }
   textarea { width:100%; min-height:90px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; }
   button { font:inherit; font-weight:600; padding:8px 14px; border:0; border-radius:8px; background:var(--acc); color:#fff; cursor:pointer; }
   button.sec { background:transparent; color:var(--acc); border:1px solid var(--acc); }
@@ -67,6 +67,18 @@
       <button id="btnClose" class="sec">Fermer</button>
     </div>
     <p class="mute">Lien à donner aux élèves :<br><code id="link">—</code> <button id="btnCopy" class="sec" style="padding:2px 10px">Copier</button></p>
+    <div class="row" style="margin-top:12px">
+      <span id="pstate" class="pill closed">Entraînement : non</span>
+      <select id="plevel">
+        <option value="">Niveau…</option>
+        <option>4ème</option>
+        <option>1ère spé</option>
+        <option>Terminale spé</option>
+      </select>
+      <button id="btnPracticeOn" class="sec">Mettre en entraînement</button>
+      <button id="btnPracticeOff" class="sec">Retirer</button>
+    </div>
+    <p class="mute">En entraînement, le QCM apparaît sur la page « Entraînement » du site : rejouable sans note, avec la correction. Les bonnes réponses deviennent donc visibles : à faire <b>après</b> l'évaluation. L'entraînement est suspendu automatiquement tant que le QCM est ouvert en évaluation.</p>
   </section>
 
   <section class="card">
@@ -120,6 +132,10 @@ async function loadRoster() {
 }
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function setState(open) { const s = $("state"); s.textContent = open ? "Ouverte" : "Fermée"; s.className = "pill " + (open ? "open" : "closed"); }
+function setPractice(on, level) {
+  const s = $("pstate"); s.textContent = on ? `Entraînement : oui (${level})` : "Entraînement : non"; s.className = "pill " + (on ? "open" : "closed");
+  if (level) $("plevel").value = level;
+}
 function updateLink() { $("link").textContent = qid() ? `${EVAL_PAGE}?q=${encodeURIComponent(qid())}` : "—"; }
 
 function paris(iso) { return new Date(iso).toLocaleString("fr-FR", { timeZone: "Europe/Paris", hour12: false }); }
@@ -144,7 +160,7 @@ function renderTable() {
 }
 
 async function refresh() {
-  try { results = await api("/results"); setState(results.open); renderTable(); msg("Données à jour.", "ok"); }
+  try { results = await api("/results"); setState(results.open); setPractice(results.practice, results.level); renderTable(); msg("Données à jour.", "ok"); }
   catch (e) { results = null; renderTable(); msg(e.message === "QCM introuvable" ? "QCM introuvable : dépose-le à l'étape 2." : e.message, "err"); }
 }
 
@@ -170,6 +186,15 @@ $("btnUpload").addEventListener("click", async () => {
 $("btnOpen").addEventListener("click", async () => { try { await api("/open", { method: "POST" }); await refresh(); } catch (e) { msg(e.message, "err"); } });
 $("btnClose").addEventListener("click", async () => { try { await api("/close", { method: "POST" }); await refresh(); } catch (e) { msg(e.message, "err"); } });
 $("btnRefresh").addEventListener("click", refresh);
+$("btnPracticeOn").addEventListener("click", async () => {
+  const level = $("plevel").value;
+  if (!level) return msg("Choisis d'abord le niveau du QCM.", "err");
+  if (results && results.open && !confirm("Ce QCM est encore ouvert en évaluation. L'entraînement ne sera visible qu'après sa fermeture. Continuer ?")) return;
+  try { await api("/practice", { method: "POST", body: JSON.stringify({ on: true, level }) }); await refresh(); msg(`QCM ajouté à l'entraînement (${level}).`, "ok"); } catch (e) { msg(e.message, "err"); }
+});
+$("btnPracticeOff").addEventListener("click", async () => {
+  try { await api("/practice", { method: "POST", body: JSON.stringify({ on: false }) }); await refresh(); msg("QCM retiré de l'entraînement.", "ok"); } catch (e) { msg(e.message, "err"); }
+});
 $("btnCopy").addEventListener("click", () => { navigator.clipboard && navigator.clipboard.writeText($("link").textContent); msg("Lien copié.", "ok"); });
 $("btnDelQuiz").addEventListener("click", async () => {
   if (!confirm("Supprimer définitivement ce QCM ET toutes les copies ? Pense à télécharger l'Excel avant.")) return;
