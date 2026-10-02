@@ -144,34 +144,25 @@
     margin-bottom: -1px;
     transition: all 0.15s;
   }
-  .tab-actions {
-    margin-left: auto;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding-bottom: 6px;
-  }
-  .qcm-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 14px;
-    border: 1px solid var(--accent);
-    border-radius: 5px;
-    background: var(--panel);
-    color: var(--accent);
-    font-family: 'EB Garamond', serif;
-    font-size: 15px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.15s;
-  }
-  .qcm-btn:hover { background: var(--accent); color: #fff; }
-  .qcm-btn.primary { background: var(--accent); color: #fff; }
-  .qcm-btn.primary:hover { filter: brightness(1.15); }
   .tab:hover { color: var(--ink); }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+  .classes-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .classes-main { flex: 1; min-width: 0; }
+  .qcm-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 200px);
+    gap: 10px;
+  }
+  .card.qcm-main { border-color: var(--accent); }
+  @media (max-width: 700px) {
+    .classes-row { flex-direction: column; align-items: stretch; }
+    .qcm-cards { grid-template-columns: repeat(2, 1fr); }
+  }
   .niveau-content { display: none; }
   .niveau-content.active { display: block; }
 
@@ -257,12 +248,10 @@
       <button class="tab active" onclick="switchNiveau(event, '4e')">4ème</button>
       <button class="tab" onclick="switchNiveau(event, '1ere')">1ère spé</button>
       <button class="tab" onclick="switchNiveau(event, 'tle')">Terminale spé</button>
-      <div class="tab-actions">
-        <a href="eval.html" class="qcm-btn primary">✅ QCM</a>
-        <a href="entrainement.html" class="qcm-btn">🔁 Entraînement</a>
-      </div>
     </div>
 
+    <div class="classes-row">
+    <div class="classes-main">
     <div class="niveau-content active" id="niveau-4e">
       <div class="grid-classes">
         <a href="fractions-equivalentes.html" class="card">
@@ -330,6 +319,22 @@
           <div class="card-tag">sesamath.net</div>
         </a>
       </div>
+    </div>
+    </div>
+    <div class="qcm-cards">
+      <a href="eval.html" class="card qcm-main">
+        <div class="card-icon">✅</div>
+        <div class="card-title">QCM</div>
+        <div class="card-desc">évaluation notée</div>
+        <div class="card-tag">v1</div>
+      </a>
+      <a href="entrainement.html" class="card">
+        <div class="card-icon">🔁</div>
+        <div class="card-title">Entraînement</div>
+        <div class="card-desc">rejouer · sans note</div>
+        <div class="card-tag">v1</div>
+      </a>
+    </div>
     </div>
   </section>
 
