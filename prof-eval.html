@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Évaluation — espace professeur</title>
 <meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <style>
   :root { --bg:#f5f6fa; --card:#fff; --ink:#1f2430; --mute:#6b7280; --acc:#2f5bd8; --line:#dfe3ec; --ok:#1c7c4a; --err:#b3261e; --warn:#b26a00; }
   @media (prefers-color-scheme: dark) {
@@ -22,6 +23,7 @@
   button { font:inherit; font-weight:600; padding:8px 14px; border:0; border-radius:8px; background:var(--acc); color:#fff; cursor:pointer; }
   button.sec { background:transparent; color:var(--acc); border:1px solid var(--acc); }
   button.danger { background:var(--err); }
+  button:disabled { opacity:.5; cursor:wait; }
   .mute { color:var(--mute); font-size:.9rem; }
   .pill { display:inline-block; padding:2px 10px; border-radius:99px; font-size:.85rem; font-weight:600; }
   .pill.open { background:color-mix(in srgb,var(--ok) 18%,transparent); color:var(--ok); }
@@ -34,6 +36,21 @@
   code { background:var(--bg); padding:1px 5px; border-radius:4px; word-break:break-all; }
   #msg { min-height:1.4em; margin:8px 0; }
   [hidden] { display:none !important; }
+
+  /* --- Liste des QCM --- */
+  #qlist td.l, #qlist th.l { text-align:left; white-space:normal; }
+  #qlist tr.sel td { background:color-mix(in srgb,var(--acc) 12%,transparent); }
+
+  /* --- Aperçu du QCM généré --- */
+  .qprev { border:1px solid var(--line); border-radius:10px; padding:12px; margin:10px 0; background:var(--bg); }
+  .qprev .qh { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px; font-weight:700; }
+  .qprev .qt { margin:4px 0 8px; }
+  .qprev img { max-width:100%; height:auto; background:#fff; border-radius:6px; }
+  .qprev ul { list-style:none; margin:0; padding:0; }
+  .qprev li { padding:4px 8px; border-radius:6px; margin:3px 0; border:1px solid transparent; }
+  .qprev li.good { border-color:var(--ok); background:color-mix(in srgb,var(--ok) 14%,transparent); font-weight:600; }
+  .qprev li b.k { display:inline-block; width:1.4em; color:var(--mute); }
+  .warn { color:var(--warn); }
 </style>
 </head>
 <body>
@@ -49,6 +66,41 @@
       <button id="btnConnect">Charger</button>
     </div>
     <p class="mute">Le mot de passe est gardé uniquement le temps de l'onglet (il n'est jamais enregistré sur le site).</p>
+  </section>
+
+  <section class="card">
+    <h2>Mes QCM <span id="listInfo" class="mute"></span></h2>
+    <div class="row"><button id="btnList" class="sec">Actualiser la liste</button>
+    <span class="mute">Clique sur « Choisir » pour travailler sur un QCM (ouvrir, fermer, résultats...).</span></div>
+    <div class="wrap"><table id="qlist"></table></div>
+  </section>
+
+  <section class="card">
+    <h2>Générer un QCM depuis un cours (.tex)</h2>
+    <div class="row">
+      <input id="texFile" type="file" accept=".tex,text/plain">
+      <label>Questions
+        <select id="genN"><option>5</option><option selected>10</option><option>15</option></select>
+      </label>
+      <select id="genLevel">
+        <option value="">Niveau (facultatif)</option>
+        <option>4ème</option>
+        <option>1ère spé</option>
+        <option>Terminale spé</option>
+      </select>
+      <input id="genTitle" type="text" placeholder="Titre (facultatif)" size="24">
+      <button id="btnGen">Générer</button>
+    </div>
+    <p class="mute">Le cours est envoyé à Claude, qui propose un QCM (20 à 60 secondes). <b>Rien n'est enregistré</b> tant que tu ne cliques pas sur « Enregistrer » : relis d'abord chaque question et sa bonne réponse. Choisis l'identifiant du QCM à l'étape 1 avant d'enregistrer.</p>
+    <div id="previewBox" hidden>
+      <div id="genWarn" class="mute warn"></div>
+      <div id="preview"></div>
+      <div class="row">
+        <button id="btnGenSave">Enregistrer ce QCM</button>
+        <button id="btnGenJson" class="sec">Copier dans la zone JSON (étape 2)</button>
+        <button id="btnGenDiscard" class="sec">Abandonner</button>
+      </div>
+    </div>
   </section>
 
   <section class="card">
@@ -103,6 +155,8 @@
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <script>
 // ====== À ADAPTER : URL de ton Worker et URL publique de eval.html ======
 const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
@@ -111,6 +165,8 @@ const EVAL_PAGE = "https://maths-jlp.github.io/ind/eval.html";
 
 const $ = (id) => document.getElementById(id);
 let results = null;
+let quizList = [];
+let gen = null; // QCM généré, en attente de relecture
 
 try { $("token").value = sessionStorage.getItem("qcm-token") || ""; $("quizId").value = sessionStorage.getItem("qcm-quiz") || ""; } catch (e) {}
 
@@ -123,6 +179,12 @@ function api(path, opt = {}) {
 }
 function rosterApi(opt = {}) {
   return fetch(API + "/api/admin/roster", {
+    ...opt, headers: { Authorization: "Bearer " + $("token").value, "Content-Type": "application/json" },
+  }).then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Erreur " + r.status); return d; });
+}
+// Routes admin hors d'un QCM précis (liste, génération)
+function adminApi(path, opt = {}) {
+  return fetch(API + "/api/admin" + path, {
     ...opt, headers: { Authorization: "Bearer " + $("token").value, "Content-Type": "application/json" },
   }).then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Erreur " + r.status); return d; });
 }
@@ -139,6 +201,31 @@ function setPractice(on, level) {
 function updateLink() { $("link").textContent = qid() ? `${EVAL_PAGE}?q=${encodeURIComponent(qid())}` : "—"; }
 
 function paris(iso) { return new Date(iso).toLocaleString("fr-FR", { timeZone: "Europe/Paris", hour12: false }); }
+
+// ---------- Liste des QCM ----------
+function renderList() {
+  const t = $("qlist");
+  if (!quizList.length) { t.innerHTML = ""; return; }
+  const head = '<tr><th class="l">Identifiant</th><th class="l">Titre</th><th>État</th><th>Entraînement</th><th>Questions</th><th>Copies</th><th></th></tr>';
+  const rows = quizList.map((q) =>
+    `<tr class="${q.id === qid() ? "sel" : ""}"><td class="l"><code>${esc(q.id)}</code></td><td class="l">${esc(q.title)}</td>` +
+    `<td><span class="pill ${q.open ? "open" : "closed"}">${q.open ? "Ouvert" : "Fermé"}</span></td>` +
+    `<td>${q.practice ? esc(q.level || "oui") : "—"}</td><td>${q.questions}</td><td>${q.submissions}</td>` +
+    `<td><button class="sec" style="padding:1px 10px" data-pick="${esc(q.id)}">Choisir</button></td></tr>`).join("");
+  t.innerHTML = head + rows;
+  t.querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", () => {
+    $("quizId").value = b.dataset.pick;
+    try { sessionStorage.setItem("qcm-quiz", qid()); } catch (e) {}
+    updateLink(); renderList(); refresh();
+  }));
+}
+async function loadList() {
+  try {
+    quizList = (await adminApi("/quizzes")).quizzes || [];
+    $("listInfo").textContent = quizList.length ? `(${quizList.length})` : "(aucun QCM enregistré)";
+  } catch (e) { quizList = []; $("listInfo").textContent = "(" + e.message + ")"; }
+  renderList();
+}
 
 function renderTable() {
   const t = $("tbl"); t.innerHTML = "";
@@ -166,8 +253,9 @@ async function refresh() {
 
 $("btnConnect").addEventListener("click", () => {
   try { sessionStorage.setItem("qcm-token", $("token").value); sessionStorage.setItem("qcm-quiz", qid()); } catch (e) {}
-  updateLink(); loadRoster(); if (qid()) refresh(); else msg("Connecté.", "ok");
+  updateLink(); loadRoster(); loadList(); if (qid()) refresh(); else msg("Connecté.", "ok");
 });
+$("btnList").addEventListener("click", loadList);
 $("btnRoster").addEventListener("click", async () => {
   const f = $("rosterFile").files[0];
   if (!f) return msg("Choisis d'abord le fichier eleves-codes.json.", "err");
@@ -175,30 +263,30 @@ $("btnRoster").addEventListener("click", async () => {
   try { const d = await rosterApi({ method: "PUT", body: JSON.stringify(body) }); msg(`Liste enregistrée (${d.count} élèves).`, "ok"); loadRoster(); if (results) refresh(); }
   catch (e) { msg(e.message, "err"); }
 });
-$("quizId").addEventListener("input", updateLink);
+$("quizId").addEventListener("input", () => { updateLink(); renderList(); });
 $("file").addEventListener("change", async (e) => { const f = e.target.files[0]; if (f) $("json").value = await f.text(); });
 
 $("btnUpload").addEventListener("click", async () => {
   let body; try { body = JSON.parse($("json").value); } catch (e) { return msg("JSON invalide : " + e.message, "err"); }
-  try { const d = await api("", { method: "PUT", body: JSON.stringify(body) }); msg(`QCM enregistré (${d.questions} questions).`, "ok"); await refresh(); }
+  try { const d = await api("", { method: "PUT", body: JSON.stringify(body) }); msg(`QCM enregistré (${d.questions} questions).`, "ok"); await refresh(); loadList(); }
   catch (e) { msg(e.message, "err"); }
 });
-$("btnOpen").addEventListener("click", async () => { try { await api("/open", { method: "POST" }); await refresh(); } catch (e) { msg(e.message, "err"); } });
-$("btnClose").addEventListener("click", async () => { try { await api("/close", { method: "POST" }); await refresh(); } catch (e) { msg(e.message, "err"); } });
+$("btnOpen").addEventListener("click", async () => { try { await api("/open", { method: "POST" }); await refresh(); loadList(); } catch (e) { msg(e.message, "err"); } });
+$("btnClose").addEventListener("click", async () => { try { await api("/close", { method: "POST" }); await refresh(); loadList(); } catch (e) { msg(e.message, "err"); } });
 $("btnRefresh").addEventListener("click", refresh);
 $("btnPracticeOn").addEventListener("click", async () => {
   const level = $("plevel").value;
   if (!level) return msg("Choisis d'abord le niveau du QCM.", "err");
   if (results && results.open && !confirm("Ce QCM est encore ouvert en évaluation. L'entraînement ne sera visible qu'après sa fermeture. Continuer ?")) return;
-  try { await api("/practice", { method: "POST", body: JSON.stringify({ on: true, level }) }); await refresh(); msg(`QCM ajouté à l'entraînement (${level}).`, "ok"); } catch (e) { msg(e.message, "err"); }
+  try { await api("/practice", { method: "POST", body: JSON.stringify({ on: true, level }) }); await refresh(); loadList(); msg(`QCM ajouté à l'entraînement (${level}).`, "ok"); } catch (e) { msg(e.message, "err"); }
 });
 $("btnPracticeOff").addEventListener("click", async () => {
-  try { await api("/practice", { method: "POST", body: JSON.stringify({ on: false }) }); await refresh(); msg("QCM retiré de l'entraînement.", "ok"); } catch (e) { msg(e.message, "err"); }
+  try { await api("/practice", { method: "POST", body: JSON.stringify({ on: false }) }); await refresh(); loadList(); msg("QCM retiré de l'entraînement.", "ok"); } catch (e) { msg(e.message, "err"); }
 });
 $("btnCopy").addEventListener("click", () => { navigator.clipboard && navigator.clipboard.writeText($("link").textContent); msg("Lien copié.", "ok"); });
 $("btnDelQuiz").addEventListener("click", async () => {
   if (!confirm("Supprimer définitivement ce QCM ET toutes les copies ? Pense à télécharger l'Excel avant.")) return;
-  try { await api("", { method: "DELETE" }); results = null; renderTable(); setState(false); msg("QCM supprimé.", "ok"); } catch (e) { msg(e.message, "err"); }
+  try { await api("", { method: "DELETE" }); results = null; renderTable(); setState(false); msg("QCM supprimé.", "ok"); loadList(); } catch (e) { msg(e.message, "err"); }
 });
 
 $("btnExport").addEventListener("click", () => {
@@ -219,8 +307,80 @@ $("btnExport").addEventListener("click", () => {
   msg("Fichier Excel téléchargé.", "ok");
 });
 
+// ---------- Génération d'un QCM depuis un cours .tex ----------
+function renderPreview() {
+  const box = $("previewBox");
+  if (!gen) { box.hidden = true; $("preview").innerHTML = ""; return; }
+  box.hidden = false;
+  $("genWarn").textContent = (gen._warnings || []).join(" ");
+  $("preview").innerHTML =
+    `<p><b>${esc(gen.title)}</b> <span class="mute">— ${gen.questions.length} question${gen.questions.length > 1 ? "s" : ""}. Les bonnes réponses sont surlignées en vert.</span></p>` +
+    gen.questions.map((q, i) =>
+      `<div class="qprev"><div class="qh"><span>${esc(q.id)}</span><button class="sec" style="padding:1px 10px" data-rm="${i}">Retirer</button></div>` +
+      `<div class="qt">${esc(q.text)}</div>` +
+      (q.image ? `<div><img alt="" src="${esc(q.image)}"></div>` : "") +
+      "<ul>" + q.choices.map((c) =>
+        `<li class="${q.correct.includes(c.id) ? "good" : ""}"><b class="k">${esc(c.id)}</b>${esc(c.text || "")}` +
+        (c.image ? `<div><img alt="" src="${esc(c.image)}"></div>` : "") + (q.correct.includes(c.id) ? " ✓" : "") + "</li>").join("") +
+      "</ul></div>").join("");
+  $("preview").querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => {
+    gen.questions.splice(Number(b.dataset.rm), 1);
+    renderPreview();
+  }));
+  if (window.renderMathInElement) {
+    try { renderMathInElement($("preview"), { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }], throwOnError: false }); } catch (e) {}
+  }
+}
+
+function cleanGen() { return gen ? { title: gen.title, questions: gen.questions } : null; }
+
+$("btnGen").addEventListener("click", async () => {
+  const f = $("texFile").files[0];
+  if (!f) return msg("Choisis d'abord le fichier .tex du cours.", "err");
+  let tex; try { tex = await f.text(); } catch (e) { return msg("Lecture du fichier impossible.", "err"); }
+  const body = { tex, n: Number($("genN").value) };
+  if ($("genLevel").value) body.niveau = $("genLevel").value;
+  if ($("genTitle").value.trim()) body.titre = $("genTitle").value.trim();
+  $("btnGen").disabled = true;
+  msg("Génération en cours… (20 à 60 secondes, ne ferme pas la page)");
+  try {
+    const d = await adminApi("/generate", { method: "POST", body: JSON.stringify(body) });
+    gen = d.quiz; gen._warnings = d.warnings || [];
+    renderPreview();
+    msg(`QCM généré (${gen.questions.length} questions) : relis-le avant de l'enregistrer.`, "ok");
+  } catch (e) { msg(e.message, "err"); }
+  finally { $("btnGen").disabled = false; }
+});
+
+$("btnGenSave").addEventListener("click", async () => {
+  const q = cleanGen();
+  if (!q || !q.questions.length) return msg("Aucun QCM à enregistrer.", "err");
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(qid())) return msg("Saisis d'abord un identifiant valide à l'étape 1 (lettres, chiffres, - et _ ; ex : 4e-thales-1).", "err");
+  if (quizList.some((x) => x.id === qid()) &&
+      !confirm(`Un QCM « ${qid()} » existe déjà : il sera REMPLACÉ (les copies reçues sont conservées). Ne fais pas cela pendant une évaluation. Continuer ?`)) return;
+  try {
+    const d = await api("", { method: "PUT", body: JSON.stringify(q) });
+    $("json").value = JSON.stringify(q, null, 2);
+    msg(`QCM « ${qid()} » enregistré (${d.questions} questions). Il est fermé : ouvre-le à l'étape 3 pour tes élèves.`, "ok");
+    gen = null; renderPreview();
+    try { sessionStorage.setItem("qcm-quiz", qid()); } catch (e) {}
+    updateLink(); await refresh(); loadList();
+  } catch (e) { msg(e.message, "err"); }
+});
+$("btnGenJson").addEventListener("click", () => {
+  const q = cleanGen();
+  if (!q) return;
+  $("json").value = JSON.stringify(q, null, 2);
+  msg("QCM copié dans la zone JSON de l'étape 2 : tu peux le modifier à la main puis cliquer sur « Envoyer le QCM ».", "ok");
+  $("json").scrollIntoView({ behavior: "smooth", block: "center" });
+});
+$("btnGenDiscard").addEventListener("click", () => {
+  if (gen && !confirm("Abandonner ce QCM généré ?")) return;
+  gen = null; renderPreview(); msg("QCM généré abandonné.");
+});
+
 updateLink();
-if ($("token").value) { loadRoster(); if (qid()) refresh(); }
+if ($("token").value) { loadRoster(); loadList(); if (qid()) refresh(); }
 </script>
 </body>
 </html>
