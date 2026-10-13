@@ -30,7 +30,9 @@
   .choices.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; }
   .choices.grid label.choice { margin:0; }
   .hint { font-size:.85rem; color:var(--mute); margin-top:6px; }
-  #bar { position:sticky; top:0; background:var(--bg); padding:8px 0; z-index:5; font-size:.9rem; color:var(--mute); }
+  #bar { position:sticky; top:0; background:var(--bg); padding:8px 0; z-index:5; font-size:.9rem; color:var(--mute); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  #timer { font-size:1.15rem; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
+  #timer.low { color:var(--err); }
   .msg { padding:14px; border-radius:8px; border:1px solid var(--line); }
   .msg.err { color:var(--err); border-color:var(--err); }
   .msg.ok { color:var(--ok); border-color:var(--ok); }
@@ -54,13 +56,13 @@
   </section>
 
   <section id="quiz" hidden>
-    <div id="bar"></div>
+    <div id="bar"><span id="barInfo"></span><span id="timer" hidden></span></div>
     <div id="questions"></div>
     <p><button id="send">Envoyer mes réponses</button></p>
   </section>
 
   <section id="done" class="msg ok" hidden>
-    <strong>Réponses envoyées.</strong> Tu peux fermer cette page.
+    <span id="doneNote"></span><strong>Réponses envoyées.</strong> Tu peux fermer cette page.
   </section>
 </main>
 
@@ -75,6 +77,7 @@ const $ = (id) => document.getElementById(id);
 const quizFromUrl = (new URLSearchParams(location.search).get("q") || "").trim();
 let quizId = quizFromUrl;
 let quiz = null, studentId = "", order = [], answers = {}, sent = false;
+let expired = false, timerId = null, memStart = null; // décompte
 
 // --- mélange déterministe (même ordre si l'élève recharge la page) ---
 function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -154,7 +157,78 @@ function render() {
 
 function updateBar() {
   const done = quiz.questions.filter((q) => (answers[q.id] || []).length > 0).length;
-  $("bar").textContent = `ID ${studentId} · ${done} / ${quiz.questions.length} questions répondues`;
+  $("barInfo").textContent = `ID ${studentId} · ${done} / ${quiz.questions.length} questions répondues`;
+}
+
+// ---------- Décompte (durée fournie par le QCM, en minutes) ----------
+const tkey = () => `qcm-start:${quizId}:${(quiz && quiz.version) || ''}:${studentId}`;
+function getStart() { let v = null; try { v = Number(localStorage.getItem(tkey())) || null; } catch (e) {} return v || memStart; }
+function setStart(v) { memStart = v; try { localStorage.setItem(tkey(), String(v)); } catch (e) {} }
+function clearStart() { memStart = null; try { localStorage.removeItem(tkey()); } catch (e) {} }
+
+function startTimer() {
+  const timer = $("timer");
+  if (!quiz.duree) { timer.hidden = true; return; }
+  const now = Date.now();
+  let start = getStart();
+  // début mémorisé (survit au rechargement) ; ignoré s'il est incohérent ou très ancien (séance abandonnée)
+  if (!start || start > now || now - start > (quiz.duree + 10) * 60000) { start = now; setStart(start); }
+  const end = start + quiz.duree * 60000;
+  timer.hidden = false;
+  const tick = () => {
+    if (expired) return;
+    const left = end - Date.now();
+    if (left <= 0) { timer.textContent = "⏱ 00:00"; timer.className = "low"; clearInterval(timerId); onTimeUp(); return; }
+    const s = Math.ceil(left / 1000);
+    timer.textContent = `⏱ ${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+    timer.className = left <= 60000 ? "low" : "";
+  };
+  tick();
+  if (!expired) timerId = setInterval(tick, 500);
+}
+
+function onTimeUp() {
+  if (expired || sent) return;
+  expired = true;
+  document.querySelectorAll("#questions input").forEach((i) => { i.disabled = true; });
+  $("send").disabled = true;
+  setStatus("Temps écoulé : envoi de tes réponses…", "err");
+  window.scrollTo(0, 0);
+  submitAnswers(true);
+}
+
+// Envoi des réponses ; auto = true quand le temps est écoulé (pas de confirmation, nouvelle tentative si la connexion échoue)
+async function submitAnswers(auto) {
+  if (sent) return;
+  if (!auto) {
+    const missing = quiz.questions.filter((q) => !(answers[q.id] || []).length).length;
+    if (missing && !confirm(`${missing} question(s) sans réponse. Envoyer quand même ?`)) return;
+    if (!missing && !confirm("Envoyer définitivement tes réponses ?")) return;
+  }
+  $("send").disabled = true;
+  let retry = false;
+  try {
+    const r = await fetch(`${API}/api/quiz/${encodeURIComponent(quizId)}/submit`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId, answers, version: quiz.version || "" }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+      sent = true; store(skey(), undefined); clearStart(); clearInterval(timerId);
+      $("doneNote").textContent = auto ? "Le temps était écoulé : tes réponses ont été envoyées automatiquement. " : "";
+      setStatus(""); $("quiz").hidden = true; $("done").hidden = false; window.scrollTo(0, 0); return;
+    }
+    if (r.status === 409 && data.error === "stale") { alert("Le QCM a été mis à jour par ton professeur pendant que tu répondais. La page va se recharger : refais tes réponses."); location.reload(); return; }
+    if (r.status === 409) alert("Une copie a déjà été envoyée avec cet identifiant. Préviens ton professeur si ce n'est pas la tienne.");
+    else if (r.status === 404 && data.error === "unknown") alert("Identifiant inconnu : tes réponses n'ont pas pu être envoyées. Préviens ton professeur.");
+    else if (r.status === 403) alert("L'évaluation est fermée : tes réponses n'ont pas pu être envoyées. Préviens ton professeur.");
+    else if (auto) retry = true;
+    else alert(data.error || "Erreur d'envoi. Réessaie.");
+  } catch (e) {
+    if (auto) retry = true; else alert("Connexion impossible : tes réponses sont conservées, réessaie dans un instant.");
+  }
+  if (retry) { setStatus("Temps écoulé. Connexion impossible : nouvelle tentative dans quelques secondes…", "err"); setTimeout(() => submitAnswers(true), 5000); return; }
+  $("send").disabled = expired;
 }
 
 $("start").addEventListener("click", async () => {
@@ -179,33 +253,16 @@ $("start").addEventListener("click", async () => {
   } catch (e) { alert("Connexion impossible. Vérifie ta connexion internet."); $("start").disabled = false; return; }
   $("start").disabled = false;
   studentId = v; answers = load(skey()) || {};
+  // QCM chronométré : on prévient l'élève avant de lancer le décompte (pas de question si le décompte est déjà en cours après un rechargement)
+  if (quiz.duree && !getStart() &&
+      !confirm(`Ce QCM dure ${quiz.duree} minute${quiz.duree > 1 ? "s" : ""}. Le décompte démarre dès que tu valides, et tes réponses seront envoyées automatiquement à la fin du temps. Commencer ?`)) return;
   setStatus("");
-  $("login").hidden = true; $("quiz").hidden = false; render(); window.scrollTo(0, 0);
+  $("login").hidden = true; $("quiz").hidden = false; render(); startTimer(); window.scrollTo(0, 0);
 });
 $("sid").addEventListener("keydown", (e) => { if (e.key === "Enter") $("start").click(); });
 $("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("sid").focus(); });
 
-$("send").addEventListener("click", async () => {
-  if (sent) return;
-  const missing = quiz.questions.filter((q) => !(answers[q.id] || []).length).length;
-  if (missing && !confirm(`${missing} question(s) sans réponse. Envoyer quand même ?`)) return;
-  if (!missing && !confirm("Envoyer définitivement tes réponses ?")) return;
-  $("send").disabled = true;
-  try {
-    const r = await fetch(`${API}/api/quiz/${encodeURIComponent(quizId)}/submit`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId, answers, version: quiz.version || "" }),
-    });
-    const data = await r.json().catch(() => ({}));
-    if (r.ok) { sent = true; store(skey(), undefined); $("quiz").hidden = true; $("done").hidden = false; window.scrollTo(0, 0); return; }
-    if (r.status === 409 && data.error === "stale") { alert("Le QCM a été mis à jour par ton professeur pendant que tu répondais. La page va se recharger : refais tes réponses."); location.reload(); return; }
-    if (r.status === 409) alert("Une copie a déjà été envoyée avec cet identifiant. Préviens ton professeur si ce n'est pas la tienne.");
-    else if (r.status === 404 && data.error === "unknown") alert("Identifiant inconnu : tes réponses n'ont pas pu être envoyées. Préviens ton professeur.");
-    else if (r.status === 403) alert("L'évaluation est fermée : tes réponses n'ont pas pu être envoyées. Préviens ton professeur.");
-    else alert(data.error || "Erreur d'envoi. Réessaie.");
-  } catch (e) { alert("Connexion impossible : tes réponses sont conservées, réessaie dans un instant."); }
-  $("send").disabled = false;
-});
+$("send").addEventListener("click", () => submitAnswers(false));
 
 init();
 </script>
