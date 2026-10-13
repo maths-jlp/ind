@@ -88,9 +88,17 @@
         <option>1ère spé</option>
         <option>Terminale spé</option>
       </select>
+      <select id="genDiff">
+        <option value="facile">Facile</option>
+        <option value="moyen" selected>Moyen</option>
+        <option value="difficile">Difficile</option>
+      </select>
+      <label>Durée (min) <input id="genDuree" type="number" min="1" max="180" value="10" style="width:5em"></label>
       <input id="genTitle" type="text" placeholder="Titre (facultatif)" size="24">
       <button id="btnGen">Générer</button>
     </div>
+    <div class="row" style="margin-top:8px"><input id="genConsignes" type="text" placeholder="Consignes libres (facultatif) : ex. évite les fractions, insiste sur les identités remarquables" size="70" maxlength="500"></div>
+    <p class="mute">Durée : par défaut 1 minute par question (modifiable, ou vide pour aucun décompte). Le décompte s'affiche chez l'élève et ses réponses partent automatiquement à zéro.</p>
     <p class="mute">Le cours est envoyé à Claude, qui propose un QCM (20 à 60 secondes). <b>Rien n'est enregistré</b> tant que tu ne cliques pas sur « Enregistrer » : relis d'abord chaque question et sa bonne réponse. Choisis l'identifiant du QCM à l'étape 1 avant d'enregistrer.</p>
     <div id="previewBox" hidden>
       <div id="genWarn" class="mute warn"></div>
@@ -206,11 +214,11 @@ function paris(iso) { return new Date(iso).toLocaleString("fr-FR", { timeZone: "
 function renderList() {
   const t = $("qlist");
   if (!quizList.length) { t.innerHTML = ""; return; }
-  const head = '<tr><th class="l">Identifiant</th><th class="l">Titre</th><th>État</th><th>Entraînement</th><th>Questions</th><th>Copies</th><th></th></tr>';
+  const head = '<tr><th class="l">Identifiant</th><th class="l">Titre</th><th>État</th><th>Entraînement</th><th>Questions</th><th>Durée</th><th>Copies</th><th></th></tr>';
   const rows = quizList.map((q) =>
     `<tr class="${q.id === qid() ? "sel" : ""}"><td class="l"><code>${esc(q.id)}</code></td><td class="l">${esc(q.title)}</td>` +
     `<td><span class="pill ${q.open ? "open" : "closed"}">${q.open ? "Ouvert" : "Fermé"}</span></td>` +
-    `<td>${q.practice ? esc(q.level || "oui") : "—"}</td><td>${q.questions}</td><td>${q.submissions}</td>` +
+    `<td>${q.practice ? esc(q.level || "oui") : "—"}</td><td>${q.questions}</td><td>${q.duree ? q.duree + " min" : "—"}</td><td>${q.submissions}</td>` +
     `<td><button class="sec" style="padding:1px 10px" data-pick="${esc(q.id)}">Choisir</button></td></tr>`).join("");
   t.innerHTML = head + rows;
   t.querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", () => {
@@ -314,7 +322,8 @@ function renderPreview() {
   box.hidden = false;
   $("genWarn").textContent = (gen._warnings || []).join(" ");
   $("preview").innerHTML =
-    `<p><b>${esc(gen.title)}</b> <span class="mute">— ${gen.questions.length} question${gen.questions.length > 1 ? "s" : ""}. Les bonnes réponses sont surlignées en vert.</span></p>` +
+    `<p><b>${esc(gen.title)}</b> <span class="mute">— ${gen.questions.length} question${gen.questions.length > 1 ? "s" : ""}. Les bonnes réponses sont surlignées en vert.</span> ` +
+    `<label class="mute">Durée : <input id="prevDuree" type="number" min="1" max="180" value="${gen.duree || ""}" placeholder="aucune" style="width:5.5em"> min</label></p>` +
     gen.questions.map((q, i) =>
       `<div class="qprev"><div class="qh"><span>${esc(q.id)}</span><button class="sec" style="padding:1px 10px" data-rm="${i}">Retirer</button></div>` +
       `<div class="qt">${esc(q.text)}</div>` +
@@ -323,6 +332,10 @@ function renderPreview() {
         `<li class="${q.correct.includes(c.id) ? "good" : ""}"><b class="k">${esc(c.id)}</b>${esc(c.text || "")}` +
         (c.image ? `<div><img alt="" src="${esc(c.image)}"></div>` : "") + (q.correct.includes(c.id) ? " ✓" : "") + "</li>").join("") +
       "</ul></div>").join("");
+  $("prevDuree").addEventListener("input", (e) => {
+    const v = Number(e.target.value);
+    if (e.target.value.trim() !== "" && Number.isInteger(v) && v >= 1 && v <= 180) gen.duree = v; else delete gen.duree;
+  });
   $("preview").querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => {
     gen.questions.splice(Number(b.dataset.rm), 1);
     renderPreview();
@@ -332,7 +345,15 @@ function renderPreview() {
   }
 }
 
-function cleanGen() { return gen ? { title: gen.title, questions: gen.questions } : null; }
+function cleanGen() {
+  if (!gen) return null;
+  const q = { title: gen.title, questions: gen.questions };
+  if (gen.duree) q.duree = gen.duree;
+  return q;
+}
+// durée par défaut = 1 minute par question, tant que tu n'as pas touché au champ
+$("genN").addEventListener("change", () => { const d = $("genDuree"); if (d.dataset.touched !== "1") d.value = $("genN").value; });
+$("genDuree").addEventListener("input", () => { $("genDuree").dataset.touched = "1"; });
 
 $("btnGen").addEventListener("click", async () => {
   const f = $("texFile").files[0];
@@ -340,6 +361,13 @@ $("btnGen").addEventListener("click", async () => {
   let tex; try { tex = await f.text(); } catch (e) { return msg("Lecture du fichier impossible.", "err"); }
   const body = { tex, n: Number($("genN").value) };
   if ($("genLevel").value) body.niveau = $("genLevel").value;
+  body.difficulte = $("genDiff").value;
+  const dur = Number($("genDuree").value);
+  if ($("genDuree").value.trim() !== "") {
+    if (!Number.isInteger(dur) || dur < 1 || dur > 180) return msg("Durée : un nombre entier de minutes entre 1 et 180 (ou vide pour aucun décompte).", "err");
+    body.duree = dur;
+  }
+  if ($("genConsignes").value.trim()) body.consignes = $("genConsignes").value.trim();
   if ($("genTitle").value.trim()) body.titre = $("genTitle").value.trim();
   $("btnGen").disabled = true;
   msg("Génération en cours… (20 à 60 secondes, ne ferme pas la page)");
