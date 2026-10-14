@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ma ligne</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@500;700;800&family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+/* Mode tableau : bandeau compact en haut, tout le reste reste blanc pour écrire. Thème clair volontaire (tableau blanc). */
+:root{
+  --bg:#ffffff; --surface:#ffffff; --surface-2:#eef1f6; --fg:#16202e; --muted:#5b6778; --rule:#d3dae4;
+  --line:#1f5fbf; --line-soft:#c9d8f0; --future:#c3ccd8;
+  --vert:#2e9d57; --orange:#e08a1e; --rouge:#d23c3c;
+  --vert-bg:#e5f4eb; --orange-bg:#fcf0de; --rouge-bg:#fbe5e5;
+  --f-display:"Overpass","Segoe UI",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"Overpass Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.4}
+[hidden]{display:none!important}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--line);outline-offset:2px;border-radius:6px}
+svg{display:block}
+
+.bandeau{border-bottom:2px solid var(--rule);background:var(--surface);padding-block:8px 6px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:6px}
+.haut{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+.classe{font-family:var(--f-display);font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--line);border-radius:6px;padding:3px 8px}
+h1{font-family:var(--f-display);font-weight:800;font-size:19px;margin:0;line-height:1.15}
+.ici{font-size:14px;color:var(--muted)}
+.ici b{color:var(--line)}
+.droite{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select{background:var(--surface);border:1px solid var(--rule);border-radius:7px;padding:4px 8px;font-size:13px}
+.btn{background:var(--surface);border:1px solid var(--rule);border-radius:7px;padding:4px 10px;font-weight:700;font-size:13px;text-decoration:none;color:var(--fg)}
+.btn:hover{border-color:var(--line)}
+.lien-cours{color:var(--line);border-color:var(--line)}
+.legende{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);align-items:center}
+.legende span{display:inline-flex;gap:4px;align-items:center}
+.pastille{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+.ligne-box{overflow:auto;max-height:24vh}
+.ligne{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);min-width:min-content}
+.station{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 4px}
+.rail{position:relative;width:100%;height:22px;display:flex;justify-content:center;align-items:center}
+.rail::before,.rail::after{content:"";position:absolute;top:50%;height:6px;margin-top:-3px;background:var(--future)}
+.rail::before{left:-4px;right:50%}.rail::after{left:50%;right:-4px}
+.station:first-child .rail::before,.station:last-child .rail::after{display:none}
+.passe .rail::before,.passe .rail::after,.ici-st .rail::before{background:var(--line)}
+.arret{position:relative;z-index:1;width:18px;height:18px;border-radius:50%;border:4px solid var(--future);background:var(--surface)}
+.passe .arret{border-color:var(--line);background:var(--line)}
+.ici-st .arret{width:22px;height:22px;border:5px solid var(--line);box-shadow:0 0 0 4px var(--line-soft)}
+.nom{font-family:var(--f-display);font-weight:700;font-size:13px;line-height:1.15;text-align:center;text-wrap:balance;color:var(--fg);text-decoration:none}
+a.nom{border-bottom:2px solid var(--line-soft)}
+.futur .nom{color:var(--muted)}
+.ici-st .nom{color:var(--line)}
+.exos{display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
+
+.exo{display:inline-flex;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--rule);border-left:4px solid var(--c);border-radius:6px;padding:2px 6px 2px 4px;font-size:12px;text-decoration:none;color:var(--fg)}
+.exo.d-vert{--c:var(--vert);--cbg:var(--vert-bg)}.exo.d-orange{--c:var(--orange);--cbg:var(--orange-bg)}.exo.d-rouge{--c:var(--rouge);--cbg:var(--rouge-bg)}
+.exo.s-en_cours{background:var(--cbg);border-color:var(--c)}
+.exo.s-fait{background:var(--surface-2);border-color:transparent}
+.exo.s-fait .ref{color:var(--muted);text-decoration:line-through}
+.exo .st{color:var(--c)}
+.exo .lieu{color:var(--muted)}
+.ref{font-family:var(--f-mono);font-weight:600}
+button.exo{font:inherit;font-size:12px}
+button.exo:hover{border-color:var(--line)}
+.fichier .ref{text-decoration:underline;text-decoration-color:var(--c);text-underline-offset:2px}
+
+.tableau{min-height:72vh}
+.maj{position:fixed;right:10px;bottom:calc(6px + env(safe-area-inset-bottom,0px));font-size:11px;color:#b8c0cc}
+
+/* Lecteur d'exercice */
+.lecteur{position:fixed;inset:0;background:var(--bg);z-index:10;display:flex;flex-direction:column}
+.lecteur-haut{display:flex;align-items:center;gap:10px;padding:10px max(14px,env(safe-area-inset-right,0px)) 10px max(14px,env(safe-area-inset-left,0px));border-bottom:2px solid var(--rule);padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.lecteur-haut h2{font-family:var(--f-display);font-size:18px;margin:0;flex:1;min-width:0;overflow-wrap:anywhere}
+.lecteur iframe{flex:1;border:0;width:100%}
+.doc{flex:1;overflow:auto;padding:20px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+.doc-in{max-width:820px;margin:0 auto;font-size:18px;line-height:1.6}
+.doc-in h2,.doc-in h3{font-family:var(--f-display);color:var(--line);margin:1.2em 0 .4em}
+.doc-in .exercice{border:1.5px solid var(--rule);border-left:5px solid var(--line);border-radius:8px;padding:10px 16px;margin:16px 0}
+.doc-in .exercice>.titre-ex{font-family:var(--f-display);font-weight:800;color:var(--line)}
+.doc-in .boite{border:1.5px solid var(--rule);border-radius:8px;padding:8px 14px;margin:12px 0;background:var(--surface-2)}
+.doc-in .centre{text-align:center}
+.doc-in .figure{color:var(--muted);font-style:italic;border:1px dashed var(--rule);border-radius:6px;padding:6px 10px;display:inline-block}
+.doc-in table{border-collapse:collapse;margin:10px auto}
+.doc-in td{border:1px solid var(--rule);padding:4px 10px;text-align:center}
+.doc-in .katex-display{overflow-x:auto;overflow-y:hidden}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-classe" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="2.5" width="12.4" height="8" rx="1"/><path d="M5 14l3-3.5 3 3.5"/></g></symbol>
+  <symbol id="i-maison" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.2L8 3l6 5.2"/><path d="M3.8 7v6.5h8.4V7"/><path d="M6.6 13.5V10h2.8v3.5"/></g></symbol>
+  <symbol id="i-afaire" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-encours" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 2.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></symbol>
+  <symbol id="i-fait" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" fill="currentColor"/><path d="M5.5 9.3l2.3 2.3 4.6-4.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3.5 1.8h6l3 3v9.4h-9z"/><path d="M9.5 1.8v3h3M5.5 8.5h5M5.5 11h5"/></g></symbol>
+</svg>
+
+<div class="bandeau">
+  <div class="haut">
+    <span class="classe" id="classe-lbl">—</span>
+    <h1 id="titre-chap">Chargement…</h1>
+    <span class="ici" id="ici"></span>
+    <div class="droite">
+      <span id="lien-cours"></span>
+      <select id="sel-chap" aria-label="Chapitre"></select>
+      <button class="btn" id="btn-plein">Plein écran</button>
+    </div>
+  </div>
+  <div class="ligne-box"><div class="ligne" id="ligne"></div></div>
+  <div class="legende" id="legende"></div>
+</div>
+<div class="tableau" aria-hidden="true"></div>
+<div class="maj" id="maj"></div>
+
+<div class="lecteur" id="lecteur" hidden>
+  <div class="lecteur-haut">
+    <h2 id="lect-titre"></h2>
+    <a class="btn" id="lect-ouvrir" target="_blank" rel="noopener">Ouvrir le fichier</a>
+    <button class="btn" id="lect-fermer">Fermer</button>
+  </div>
+  <iframe id="lect-pdf" title="Exercice" hidden></iframe>
+  <div class="doc" id="lect-doc" hidden><div class="doc-in" id="lect-contenu"></div></div>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const STATUTS = {a_faire:["À faire","i-afaire"], en_cours:["En cours","i-encours"], fait:["Fait","i-fait"]};
+const DIFFS = {vert:"Facile", orange:"Moyen", rouge:"Difficile"};
+const LIEUX = {classe:["En classe","i-classe"], maison:["À la maison","i-maison"]};
+const CLASSES = {"4eme":"4ème", "1ere":"1ère Spé", "terminale":"Terminale Spé"};
+const lienOk = u => /^https?:\/\//i.test(String(u||"")) || /^[\w.\-\/ %]+\.(pdf|html?|tex)$/i.test(String(u||""));
+const icon = (id, w=14) => `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#${id}"/></svg>`;
+const classe = new URLSearchParams(location.search).get("classe") || "terminale";
+let chapitres = [], idx = 0;
+
+$("#classe-lbl").textContent = CLASSES[classe] || classe;
+document.title = "Ma ligne " + (CLASSES[classe] || classe);
+$("#legende").innerHTML =
+  `<span><span class="pastille" style="background:var(--vert)"></span>Facile</span>
+   <span><span class="pastille" style="background:var(--orange)"></span>Moyen</span>
+   <span><span class="pastille" style="background:var(--rouge)"></span>Difficile</span><span>·</span>
+   <span>${icon("i-afaire")}À faire</span><span>${icon("i-encours")}En cours</span><span>${icon("i-fait")}Fait</span><span>·</span>
+   <span>${icon("i-classe")}En classe</span><span>${icon("i-maison")}À la maison</span><span>${icon("i-doc")}Fichier à ouvrir</span>`;
+
+fetch("progression-data.json?v=" + Date.now()).then(r => r.json()).then(d => {
+  chapitres = (d.classes && d.classes[classe]) || [];
+  if (d.maj) $("#maj").textContent = "Mis à jour le " + new Date(d.maj).toLocaleDateString("fr-FR", {day:"numeric", month:"long"});
+  const sel = $("#sel-chap");
+  sel.innerHTML = chapitres.map((c,i) => `<option value="${i}">${esc(c.titre)}</option>`).join("");
+  sel.hidden = chapitres.length < 2;
+  sel.onchange = () => { idx = +sel.value; render(); };
+  render();
+}).catch(() => { $("#titre-chap").textContent = "Progression indisponible"; });
+
+function render(){
+  const c = chapitres[idx];
+  if (!c){ $("#titre-chap").textContent = "Aucun chapitre pour l'instant"; $("#ligne").innerHTML = ""; return; }
+  const cur = Math.min(c.courant, c.notions.length - 1);
+  $("#titre-chap").textContent = c.titre;
+  $("#ici").innerHTML = c.notions[cur] ? `On en est à : <b>${esc(c.notions[cur].titre)}</b>` : "";
+  $("#lien-cours").innerHTML = lienOk(c.lien) ? `<a class="btn lien-cours" href="${esc(c.lien)}" target="_blank" rel="noopener">Cours ↗</a>` : "";
+  $("#ligne").innerHTML = c.notions.map((no, i) => {
+    const etat = i < cur ? "passe" : i === cur ? "ici-st" : "futur";
+    const ex = c.exos.filter(e => e.notion === no.id);
+    return `<div class="station ${etat}">
+      <div class="rail"><span class="arret"></span></div>
+      ${lienOk(no.lien) ? `<a class="nom" href="${esc(no.lien)}" target="_blank" rel="noopener">${esc(no.titre)} ↗</a>` : `<div class="nom">${esc(no.titre)}</div>`}
+      <div class="exos">${ex.map((e, k) => {
+        const st = STATUTS[e.statut] || STATUTS.a_faire, li = LIEUX[e.lieu] || LIEUX.classe;
+        const tip = `${esc(e.ref)} · ${li[0]} · ${DIFFS[e.diff]||""} · ${st[0]}`;
+        const inner = `<span class="st">${icon(st[1])}</span><span class="ref">${esc(e.ref)}</span>${e.fichier ? `<span class="lieu">${icon("i-doc")}</span>` : ""}<span class="lieu">${icon(li[1])}</span>`;
+        return e.fichier && lienOk(e.fichier)
+          ? `<button class="exo fichier s-${e.statut} d-${e.diff}" data-ouvrir="${i}:${k}" title="${tip} — ouvrir">${inner}</button>`
+          : `<span class="exo s-${e.statut} d-${e.diff}" title="${tip}">${inner}</span>`;
+      }).join("")}</div>
+    </div>`;
+  }).join("");
+  $("#ligne").querySelectorAll("[data-ouvrir]").forEach(b => b.onclick = () => {
+    const [i, k] = b.dataset.ouvrir.split(":").map(Number);
+    const ex = c.exos.filter(e => e.notion === c.notions[i].id)[k];
+    ouvrir(ex);
+  });
+}
+
+/* ---------- Lecteur ---------- */
+function ouvrir(e){
+  const url = e.fichier;
+  $("#lect-titre").textContent = e.ref;
+  $("#lect-ouvrir").href = url;
+  $("#lecteur").hidden = false;
+  const pdf = $("#lect-pdf"), doc = $("#lect-doc");
+  pdf.hidden = true; doc.hidden = true; pdf.removeAttribute("src");
+  if (/\.tex$/i.test(url)){
+    doc.hidden = false;
+    $("#lect-contenu").innerHTML = "<p>Chargement…</p>";
+    fetch(url + "?v=" + Date.now()).then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => {
+      $("#lect-contenu").innerHTML = texVersHtml(t);
+      if (window.renderMathInElement) renderMathInElement($("#lect-contenu"), {
+        delimiters:[{left:"$$",right:"$$",display:true},{left:"\\[",right:"\\]",display:true},{left:"\\(",right:"\\)",display:false},{left:"$",right:"$",display:false},
+          {left:"\\begin{align*}",right:"\\end{align*}",display:true},{left:"\\begin{align}",right:"\\end{align}",display:true},
+          {left:"\\begin{equation*}",right:"\\end{equation*}",display:true},{left:"\\begin{equation}",right:"\\end{equation}",display:true},
+          {left:"\\begin{cases}",right:"\\end{cases}",display:true}],
+        throwOnError:false, macros:{"\\R":"\\mathbb{R}","\\N":"\\mathbb{N}","\\Z":"\\mathbb{Z}","\\Q":"\\mathbb{Q}","\\C":"\\mathbb{C}"}
+      });
+    }).catch(() => { $("#lect-contenu").innerHTML = "<p>Le fichier n'a pas pu être chargé.</p>"; });
+  } else {
+    pdf.hidden = false; pdf.src = url;
+  }
+}
+$("#lect-fermer").onclick = () => { $("#lecteur").hidden = true; $("#lect-pdf").removeAttribute("src"); };
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !$("#lecteur").hidden) $("#lect-fermer").click(); });
+
+/* Conversion LaTeX -> HTML lisible (texte, listes, exercices ; les maths sont rendues par KaTeX). */
+function texVersHtml(src){
+  let t = src.replace(/\r/g, "");
+  const m = t.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
+  if (m) t = m[1];
+  t = t.replace(/(^|[^\\])%.*$/gm, "$1");
+  t = t.replace(/\\begin\{(tikzpicture|pspicture|figure)\}[\s\S]*?\\end\{\1\}/g, "\u0001FIG\u0001");
+  t = t.replace(/\\includegraphics(\[[^\]]*\])?\{[^}]*\}/g, "\u0001FIG\u0001");
+  const maths = [];
+  const garde = s => { maths.push(s); return "\u0002" + (maths.length - 1) + "\u0002"; };
+  t = t.replace(/\\begin\{(align\*?|equation\*?|cases|array|gather\*?)\}[\s\S]*?\\end\{\1\}/g, garde);
+  t = t.replace(/\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$(?:\\.|[^$\\])+\$/g, garde);
+  t = esc(t);
+  t = t.replace(/\\(maketitle|newpage|clearpage|noindent|medskip|bigskip|smallskip|centering|hfill|vfill|par|tableofcontents|pagebreak|linebreak|hline|toprule|midrule|bottomrule)\b/g, "");
+  t = t.replace(/\\(vspace|hspace|setlength|label|pagestyle|thispagestyle|setcounter|addtocounter)\*?\{[^}]*\}(\{[^}]*\})?/g, "");
+  t = t.replace(/\\og\s*/g, "« ").replace(/\s*\\fg\{?\}?/g, " »").replace(/~/g, "&nbsp;");
+  t = t.replace(/\\(?:section|chapter|titre)\*?\{([^}]*)\}/g, "\n\n<h2>$1</h2>\n\n");
+  t = t.replace(/\\(?:subsection|subsubsection|paragraph)\*?\{([^}]*)\}/g, "\n\n<h3>$1</h3>\n\n");
+  let nEx = 0;
+  t = t.replace(/\\begin\{(exercice\*?|exo|exercise|Exercice)\}(\[([^\]]*)\])?(\{([^}]*)\})?/g, (_, e, _o, opt, _a, arg) => {
+    nEx++; const sous = opt || arg;
+    return `\n\n<div class="exercice"><div class="titre-ex">Exercice ${nEx}${sous ? " — " + sous : ""}</div>\n\n`;
+  });
+  t = t.replace(/\\end\{(exercice\*?|exo|exercise|Exercice)\}/g, "\n\n</div>\n\n");
+  t = t.replace(/\\begin\{enumerate\}(\[[^\]]*\])?/g, "<ol>").replace(/\\end\{enumerate\}/g, "</li></ol>");
+  t = t.replace(/\\begin\{itemize\}(\[[^\]]*\])?/g, "<ul>").replace(/\\end\{itemize\}/g, "</li></ul>");
+  t = t.replace(/\\item(\[[^\]]*\])?/g, (_, lab) => "</li><li>" + (lab ? "<b>" + lab.slice(1,-1) + "</b> " : ""));
+  t = t.replace(/<(ol|ul)>\s*<\/li>/g, "<$1>");
+  t = t.replace(/\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}/g, (_, body) =>
+    "<table>" + body.split(/\\\\/).map(r => r.trim()).filter(Boolean).map(r => "<tr>" + r.split("&amp;").map(c => "<td>" + c.trim() + "</td>").join("") + "</tr>").join("") + "</table>");
+  t = t.replace(/\\begin\{center\}/g, '<div class="centre">').replace(/\\end\{center\}/g, "</div>");
+  const boites = "tcolorbox|mdframed|framed|minipage|multicols|definition|propriete|propriété|methode|méthode|remarque|exemple|theoreme|théorème";
+  t = t.replace(new RegExp("\\\\begin\\{(" + boites + ")\\}(\\[[^\\]]*\\])?(\\{[^}]*\\})*", "g"), '<div class="boite">');
+  t = t.replace(new RegExp("\\\\end\\{(" + boites + ")\\}", "g"), "</div>");
+  for (let k = 0; k < 3; k++){
+    t = t.replace(/\\textbf\{([^{}]*)\}/g, "<b>$1</b>").replace(/\\(?:textit|emph)\{([^{}]*)\}/g, "<i>$1</i>").replace(/\\underline\{([^{}]*)\}/g, "<u>$1</u>");
+    t = t.replace(/\\[a-zA-Z]+\*?(\[[^\]]*\])?\{([^{}]*)\}/g, "$2");
+  }
+  t = t.replace(/\\begin\{[^}]*\}|\\end\{[^}]*\}/g, "");
+  t = t.replace(/\\\\(\[[^\]]*\])?/g, "<br>").replace(/\\[a-zA-Z]+\*?/g, "").replace(/[{}]/g, "");
+  t = t.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean).map(p => /^<(h2|h3|div|\/div|ol|ul|table)/.test(p) ? p : "<p>" + p + "</p>").join("\n");
+  t = t.replace(/\u0001FIG\u0001/g, '<span class="figure">Figure : voir le fichier d\'origine</span>');
+  t = t.replace(/\u0002(\d+)\u0002/g, (_, i) => esc(maths[+i]));
+  return t;
+}
+
+$("#btn-plein").onclick = () => {
+  if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+};
+})();
+</script>
+</body>
+</html>
