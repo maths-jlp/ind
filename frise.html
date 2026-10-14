@@ -143,6 +143,9 @@ const DIFFS = {vert:"Facile", orange:"Moyen", rouge:"Difficile"};
 const LIEUX = {classe:["En classe","i-classe"], maison:["À la maison","i-maison"]};
 const CLASSES = {"4eme":"4ème", "1ere":"1ère Spé", "terminale":"Terminale Spé"};
 const lienOk = u => /^https?:\/\//i.test(String(u||"")) || /^[\w.\-\/ %]+\.(pdf|html?|tex)$/i.test(String(u||""));
+const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
+// Un nom simple (sans "/") = fichier envoyé depuis la page prof ; sinon chemin du site ou adresse complète.
+const urlF = f => /^https?:\/\//i.test(f) ? f : String(f).includes("/") ? f : API + "/api/frise-file/" + encodeURIComponent(f);
 const lisible = u => /\.(pdf|tex)$/i.test(String(u||""));
 const icon = (id, w=14) => `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const classe = new URLSearchParams(location.search).get("classe") || "terminale";
@@ -157,8 +160,8 @@ $("#legende").innerHTML =
    <span>${icon("i-afaire")}À faire</span><span>${icon("i-encours")}En cours</span><span>${icon("i-fait")}Fait</span><span>·</span>
    <span>${icon("i-classe")}En classe</span><span>${icon("i-maison")}À la maison</span><span>${icon("i-doc")}Fichier à ouvrir</span>`;
 
-fetch("progression-data.json?v=" + Date.now()).then(r => r.json()).then(d => {
-  chapitres = ((d.classes && d.classes[classe]) || []).slice().reverse();   // ordre chronologique
+fetch(API + "/api/frise/" + encodeURIComponent(classe)).then(r => r.json()).then(d => {
+  chapitres = d.chapitres || [];   // ordre chronologique
   idx = Math.max(0, chapitres.length - 1);   // le plus récent par défaut
   if (d.maj) $("#maj").textContent = "Mis à jour le " + new Date(d.maj).toLocaleDateString("fr-FR", {day:"numeric", month:"long"});
   const sel = $("#sel-chap");
@@ -178,7 +181,8 @@ function render(){
   $("#sel-chap").value = idx;
   $("#sel-chap").hidden = $("#prec").hidden = $("#suiv").hidden = chapitres.length < 2;
   $("#prec").disabled = idx <= 0; $("#suiv").disabled = idx >= chapitres.length - 1;
-  $("#lien-cours").innerHTML = lienOk(c.lien) ? (lisible(c.lien) ? `<button class="btn lien-cours" data-cours="${esc(c.lien)}" data-titre="${esc("Cours — " + c.titre)}">Voir le cours</button>` : `<a class="btn lien-cours" href="${esc(c.lien)}" target="_blank" rel="noopener">Voir le cours ↗</a>`) : "";
+  const coursF = c.pdf || c.lien;
+  $("#lien-cours").innerHTML = lienOk(coursF) ? (lisible(coursF) ? `<button class="btn lien-cours" data-cours="${esc(coursF)}" data-titre="${esc("Cours — " + c.titre)}">Voir le cours</button>` : `<a class="btn lien-cours" href="${esc(urlF(coursF))}" target="_blank" rel="noopener">Voir le cours ↗</a>`) : "";
   $("#ligne").innerHTML = c.notions.map((no, i) => {
     const etat = i < cur ? "passe" : i === cur ? "ici-st" : "futur";
     const ex = c.exos.filter(e => e.notion === no.id);
@@ -205,12 +209,21 @@ function render(){
 
 /* ---------- Lecteur ---------- */
 function ouvrir(e){
-  const url = e.fichier;
+  const url = urlF(e.fichier);
   $("#lect-titre").textContent = e.ref;
   $("#lect-ouvrir").href = url;
   $("#lecteur").hidden = false;
   const pdf = $("#lect-pdf"), doc = $("#lect-doc");
   pdf.hidden = true; doc.hidden = true; pdf.removeAttribute("src");
+  if (/\.tex$/i.test(url) && !e.sansPdf){
+    // Si un PDF du même nom existe à côté du .tex, on l'affiche (figures et mise en page complètes).
+    const pdfUrl = url.replace(/\.tex$/i, ".pdf");
+    fetch(pdfUrl, {method:"HEAD"}).then(r => {
+      if (r.ok){ $("#lect-ouvrir").href = pdfUrl; pdf.hidden = false; pdf.src = pdfUrl; }
+      else ouvrir(Object.assign({}, e, {fichier:url, sansPdf:true}));
+    }).catch(() => ouvrir(Object.assign({}, e, {fichier:url, sansPdf:true})));
+    return;
+  }
   if (/\.tex$/i.test(url)){
     doc.hidden = false;
     $("#lect-contenu").innerHTML = "<p>Chargement…</p>";

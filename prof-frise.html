@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Frise — professeur</title>
+<style>*{box-sizing:border-box} body{margin:0} [hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@500;700;800&family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: plan de ligne de métro — chaque notion est une station, les exercices pendent sous leur station. */
+:root{
+  --bg:#f5f7fa; --surface:#ffffff; --surface-2:#eaeef4; --fg:#16202e; --muted:#5b6778; --rule:#d3dae4;
+  --line:#1f5fbf; --line-soft:#c9d8f0; --future:#b9c3d0;
+  --vert:#2e9d57; --orange:#e08a1e; --rouge:#d23c3c;
+  --vert-bg:#e5f4eb; --orange-bg:#fcf0de; --rouge-bg:#fbe5e5;
+  --f-display:"Overpass","Segoe UI",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"Overpass Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151d; --surface:#18202b; --surface-2:#212b38; --fg:#e7ecf3; --muted:#9aa6b6; --rule:#2e3a49;
+  --line:#5d95ec; --line-soft:#26395a; --future:#3d4a5b;
+  --vert:#4cc27a; --orange:#f0a33e; --rouge:#ef6464;
+  --vert-bg:#16301f; --orange-bg:#35270f; --rouge-bg:#3a1a1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151d; --surface:#18202b; --surface-2:#212b38; --fg:#e7ecf3; --muted:#9aa6b6; --rule:#2e3a49;
+  --line:#5d95ec; --line-soft:#26395a; --future:#3d4a5b;
+  --vert:#4cc27a; --orange:#f0a33e; --rouge:#ef6464;
+  --vert-bg:#16301f; --orange-bg:#35270f; --rouge-bg:#3a1a1a; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1280px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--line);outline-offset:2px;border-radius:6px}
+svg{display:block}
+
+/* En-tête */
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 20px}
+.titre{display:flex;flex-direction:column;gap:4px;min-width:0}
+.eyebrow{font-family:var(--f-display);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,3.4vw,36px);line-height:1.1;margin:0;text-wrap:balance}
+.chap-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input[type=text]{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:7px 10px;min-width:0}
+.btn{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:7px 12px;font-weight:700;font-size:14px;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:var(--line)}
+.btn.primary{background:var(--line);border-color:var(--line);color:#fff}
+.btn.danger{color:var(--rouge);border-color:var(--rouge)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--fg)}
+
+/* Bandeau résumé */
+.resume{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;padding:12px 16px;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
+.resume .ici{font-family:var(--f-display);font-weight:700;font-size:17px;display:flex;gap:10px;align-items:center}
+.resume .ici b{color:var(--line)}
+.stat{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px}
+.stat strong{color:var(--fg);font-size:16px}
+.nav-ici{margin-left:auto;display:flex;gap:6px}
+
+/* Filtres + légende */
+.outils{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:9px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:5px 11px;border-radius:7px;font-size:13px;font-weight:700;color:var(--muted);display:inline-flex;gap:6px;align-items:center}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.legende{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);align-items:center}
+.legende span{display:inline-flex;gap:6px;align-items:center}
+.pastille{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* La ligne */
+.ligne-box{background:var(--surface);border:1px solid var(--rule);border-radius:14px;overflow-x:auto;padding:22px 8px 18px}
+.ligne{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(178px,1fr);min-width:min-content}
+.station{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 6px;position:relative}
+.rail{position:relative;width:100%;height:34px;display:flex;justify-content:center;align-items:center}
+.rail::before,.rail::after{content:"";position:absolute;top:50%;height:8px;margin-top:-4px;background:var(--future)}
+.rail::before{left:-6px;right:50%}
+.rail::after{left:50%;right:-6px}
+.station:first-child .rail::before,.station:last-child .rail::after{display:none}
+.station.passe .rail::before,.station.passe .rail::after,.station.ici .rail::before{background:var(--line)}
+.arret{position:relative;z-index:1;width:26px;height:26px;border-radius:50%;border:6px solid var(--future);background:var(--surface);padding:0}
+.passe .arret{border-color:var(--line);background:var(--line)}
+.ici .arret{width:34px;height:34px;border:7px solid var(--line);background:var(--surface);box-shadow:0 0 0 6px var(--line-soft)}
+@media (prefers-reduced-motion:no-preference){.ici .arret{animation:pulse 2.2s ease-in-out infinite}}
+@keyframes pulse{50%{box-shadow:0 0 0 11px var(--line-soft)}}
+.badge-ici{position:absolute;top:-20px;font-family:var(--f-display);font-weight:800;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--line);white-space:nowrap}
+.nom{font-family:var(--f-display);font-weight:700;font-size:15px;line-height:1.2;text-align:center;text-wrap:balance;min-height:2.4em;color:var(--fg)}
+.futur .nom{color:var(--muted)}
+.compte{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:-6px}
+.exos{display:flex;flex-direction:column;gap:6px;width:100%}
+
+/* Fiche exercice */
+.exo{display:flex;align-items:stretch;background:var(--surface);border:1.5px solid var(--rule);border-left:5px solid var(--c);border-radius:8px;overflow:hidden}
+.exo.d-vert{--c:var(--vert);--cbg:var(--vert-bg)}
+.exo.d-orange{--c:var(--orange);--cbg:var(--orange-bg)}
+.exo.d-rouge{--c:var(--rouge);--cbg:var(--rouge-bg)}
+.exo.s-en_cours{background:var(--cbg);border-color:var(--c)}
+.exo.s-fait{background:var(--surface-2);border-color:transparent}
+.exo.s-fait .ref{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.exo.sel{outline:3px solid var(--line);outline-offset:1px}
+.exo .st{border:0;background:transparent;padding:0 4px 0 7px;color:var(--c);display:flex;align-items:center}
+.exo .corps{flex:1;min-width:0;border:0;background:transparent;text-align:left;padding:6px 8px 6px 3px;display:flex;gap:6px;align-items:center;justify-content:space-between}
+.ref{font-family:var(--f-mono);font-weight:600;font-size:13px;overflow-wrap:anywhere}
+.lieu{color:var(--muted);flex:none}
+.vide{font-size:12px;color:var(--muted);text-align:center;font-style:italic}
+
+/* Panneaux du bas */
+.panneaux{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
+.panneau{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panneau h2{font-family:var(--f-display);font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0}
+.champ{display:flex;flex-direction:column;gap:5px}
+.champ>label,.champ>.lbl{font-size:12px;font-weight:700;color:var(--muted)}
+.ligne-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ligne-form input[type=text]{flex:1 1 140px}
+.diff-btn[data-v=vert]{--c:var(--vert)}.diff-btn[data-v=orange]{--c:var(--orange)}.diff-btn[data-v=rouge]{--c:var(--rouge)}
+.diff-btn::before{content:"";width:9px;height:9px;border-radius:3px;background:var(--c)}
+.notions{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.notions li{display:flex;gap:6px;align-items:center}
+.notions .num{font-family:var(--f-mono);font-size:12px;color:var(--muted);width:20px;text-align:right;flex:none}
+.notions input{flex:1;min-width:0}
+.ico-btn{border:1px solid var(--rule);background:var(--surface);border-radius:7px;width:30px;height:30px;display:grid;place-items:center;flex:none;color:var(--muted);padding:0}
+.ico-btn:hover{color:var(--fg);border-color:var(--line)}
+.ico-btn:disabled{opacity:.35;cursor:default}
+.note{font-size:12px;color:var(--muted)}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.etat-vide{padding:40px 16px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:12px;align-items:center}
+.etat-vide strong{font-family:var(--f-display);font-size:20px;color:var(--fg)}
+#login:not([hidden]) ~ header, #login:not([hidden]) ~ #contenu{display:none}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700}
+.classes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.classes .seg button{font-size:14px;padding:6px 14px}
+a.nom{text-decoration:none;border-bottom:2px solid var(--line-soft)}
+a.nom:hover{border-bottom-color:var(--line);color:var(--line)}
+.lien-cours{font-family:var(--f-display);font-weight:700;font-size:14px;color:var(--line);text-decoration:none;border:1.5px solid var(--line);border-radius:8px;padding:5px 10px}
+.lien-cours:hover{background:var(--line);color:#fff}
+.notions li{flex-wrap:wrap}
+.notions .url{flex:1 1 100%;margin-left:26px;font-size:13px;padding:5px 8px}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:700}
+.export-box textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:12px;background:var(--surface-2);color:var(--fg);border:1px solid var(--rule);border-radius:8px;padding:8px;box-sizing:border-box}
+/* Mode projection : plus gros */
+body.proj{font-size:17px}
+body.proj .ligne{grid-auto-columns:minmax(220px,1fr)}
+body.proj .nom{font-size:19px}
+body.proj .ref{font-size:16px}
+body.proj .panneaux,body.proj #nouveau-form,body.proj #export-zone{display:none}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-classe" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="2.5" width="12.4" height="8" rx="1"/><path d="M5 14l3-3.5 3 3.5"/></g></symbol>
+  <symbol id="i-maison" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.2L8 3l6 5.2"/><path d="M3.8 7v6.5h8.4V7"/><path d="M6.6 13.5V10h2.8v3.5"/></g></symbol>
+  <symbol id="i-afaire" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-encours" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 2.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></symbol>
+  <symbol id="i-fait" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" fill="currentColor"/><path d="M5.5 9.3l2.3 2.3 4.6-4.8" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3.5 1.8h6l3 3v9.4h-9z"/><path d="M9.5 1.8v3h3M5.5 8.5h5M5.5 11h5"/></g></symbol>
+  <symbol id="i-haut" viewBox="0 0 16 16"><path d="M4 10l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bas" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="wrap">
+  <div id="login" class="panneau">
+    <h2>Connexion professeur</h2>
+    <form class="ligne-form" id="form-login">
+      <input type="password" id="token" placeholder="Mot de passe professeur (le même que pour les QCM)" autocomplete="current-password" style="flex:1 1 260px">
+      <button class="btn primary" type="submit">Se connecter</button>
+      <span class="note" id="login-msg"></span>
+    </form>
+    <span class="note">Le mot de passe est gardé uniquement le temps de l'onglet.</span>
+  </div>
+  <header>
+    <div class="titre">
+      <span class="eyebrow" id="classe-lbl">Progression du chapitre</span>
+      <h1 id="titre-chap">Chargement…</h1>
+    </div>
+    <div class="chap-bar">
+      <div class="classes"><div class="seg" role="group" aria-label="Classe" id="tabs-classes"></div></div>
+      <label for="sel-chap" class="note">Chapitre</label>
+      <select id="sel-chap"></select>
+      <button class="btn primary" id="btn-import">Importer un cours</button>
+      <button class="btn ghost" id="btn-nouveau">Créer à la main</button>
+      <button class="btn" id="btn-proj" aria-pressed="false">Mode projection</button>
+    </div>
+  </header>
+
+  <div id="import-zone" class="panneau" hidden>
+    <h2>Importer un cours</h2>
+    <div id="imp-etape1" class="ligne-form">
+      <label class="btn primary" for="imp-fichier" style="cursor:pointer">Choisir le cours (.tex de préférence)</label>
+      <input type="file" id="imp-fichier" accept=".tex,.pdf" hidden>
+      <button class="btn ghost" type="button" id="imp-annuler1">Annuler</button>
+      <span class="note">Le fichier est envoyé en ligne : les élèves l'ouvriront depuis la frise avec « Voir le cours ».</span>
+    </div>
+    <div id="imp-etape2" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="ligne-form">
+        <input type="text" id="imp-titre" aria-label="Titre du chapitre" style="flex:2 1 220px">
+        <select id="imp-classe" aria-label="Classe"></select>
+        <span class="note" id="imp-nomfichier"></span>
+      </div>
+      <div class="ligne-form" id="imp-pdf-zone">
+        <label class="btn" for="imp-pdf" style="cursor:pointer">Ajouter le PDF du cours (conseillé)</label>
+        <input type="file" id="imp-pdf" accept=".pdf" hidden>
+        <span class="note" id="imp-pdf-nom">Les élèves verront le PDF, avec figures et encadrés. Sans PDF, ils verront le .tex mis en forme.</span>
+      </div>
+      <div class="champ"><span class="lbl">Découpage proposé : chaque ligne sera une station de la frise</span>
+        <ul class="notions" id="imp-notions"></ul>
+        <div class="ligne-form"><button class="btn" type="button" id="imp-ajout">+ Ajouter une station</button>
+        <button class="btn" type="button" id="imp-claude" hidden>Proposer un autre découpage avec Claude</button>
+        <span class="note" id="imp-msg"></span></div>
+      </div>
+      <div class="ligne-form">
+        <button class="btn primary" type="button" id="imp-valider">Valider et créer la ligne</button>
+        <button class="btn ghost" type="button" id="imp-annuler2">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="nouveau-form" class="panneau" hidden>
+    <h2>Nouveau chapitre</h2>
+    <form class="ligne-form" id="form-chap">
+      <input type="text" id="nc-titre" placeholder="Titre (ex. Dérivation)" required>
+      <select id="nc-classe" aria-label="Classe"></select>
+      <button class="btn primary" type="submit">Créer</button>
+      <button class="btn ghost" type="button" id="nc-annuler">Annuler</button>
+    </form>
+  </div>
+
+  <div id="contenu"></div>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const STATUTS = [["a_faire","À faire","i-afaire"],["en_cours","En cours","i-encours"],["fait","Fait","i-fait"]];
+const DIFFS = [["vert","Facile"],["orange","Moyen"],["rouge","Difficile"]];
+const LIEUX = [["classe","En classe","i-classe"],["maison","À la maison","i-maison"]];
+const CLASSES = [["4eme","4e"],["1ere","1re Spé"],["terminale","Tle Spé"]];
+const nomClasse = k => (CLASSES.find(c => c[0] === k) || [k, k || "Sans classe"])[1];
+const lienOk = u => /^https?:\/\//i.test(String(u||"").trim()) || /^[\w.\-\/ %]+\.(pdf|html?|tex)$/i.test(String(u||"").trim());
+const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
+const SITE = "https://maths-jlp.github.io/ind/";
+// Un nom simple (sans "/") désigne un fichier envoyé au Worker ; sinon chemin du site ou adresse complète.
+const urlFichier = f => /^https?:\/\//i.test(f) ? f : String(f).includes("/") ? SITE + String(f).replace(/^\/+/, "") : API + "/api/frise-file/" + encodeURIComponent(f);
+const fichierOk = f => /\.(pdf|tex)$/i.test(String(f||"").trim());
+const nomPropre = n => n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90);
+let TOKEN = "";
+try { TOKEN = sessionStorage.getItem("qcm-token") || ""; } catch(e){}
+async function api(method, path, body, type){
+  const h = {Authorization: "Bearer " + TOKEN};
+  if (body !== undefined) h["Content-Type"] = type || "application/json";
+  const r = await fetch(API + path, {method, headers:h, body: body === undefined ? undefined : (type ? body : JSON.stringify(body))});
+  if (r.status === 401){ deconnecter("Mot de passe refusé."); throw {code:"auth"}; }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw {code:"http", message:d.error || ("Erreur " + r.status)};
+  return d;
+}
+async function envoyerFichier(f){
+  const ext = f.name.split(".").pop().toLowerCase();
+  const nom = nomPropre(f.name.replace(/\.[^.]+$/, "")) + "." + ext;
+  await api("PUT", "/api/admin/frise-file/" + encodeURIComponent(nom), f, ext === "pdf" ? "application/pdf" : "text/plain");
+  return nom;
+}
+const icon = (id, w=16) => `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#${id}"/></svg>`;
+
+const ls = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+};
+
+let chapitres = {};          // id -> chapitre
+let ordre = [];              // ids triés
+let actif = ls.get("frise.actif");
+let classeActive = ls.get("frise.classe") || "terminale";
+let filtreLieu = ls.get("frise.lieu") || "tous";
+let selExo = null;
+let charge = false;
+const local = false;
+const dirty = new Set();     // ids avec écriture en attente
+const timers = {};
+
+/* ---------- Persistance ---------- */
+function trier(){
+  ordre = Object.keys(chapitres).filter(id => chapitres[id].classe === classeActive).sort((a,b) => (chapitres[b].cree||0) - (chapitres[a].cree||0));
+  if (!chapitres[actif] || chapitres[actif].classe !== classeActive) actif = ordre[0] || null;
+}
+function sauver(ch, delai=500){
+  ch.maj = Date.now();
+  dirty.add(ch.id);
+  clearTimeout(timers[ch.id]);
+  timers[ch.id] = setTimeout(() => { timers[ch.id] = null; ecrire(ch.id); }, delai);
+}
+let file = Promise.resolve();
+function ecrire(id){
+  file = file.then(async () => {
+    const ch = chapitres[id];
+    if (!ch) { dirty.delete(id); return; }
+    const copie = JSON.parse(JSON.stringify(ch));
+    try {
+      await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(id), copie);
+    } catch(e){ if (e.code !== "auth") toast("Enregistrement impossible : " + (e.message || "réseau")); }
+    if (!timers[id]) dirty.delete(id);
+  });
+}
+async function supprimer(id){
+  delete chapitres[id];
+  trier(); render();
+  try {
+    await api("DELETE", "/api/admin/frise/chapitre/" + encodeURIComponent(id));
+  } catch(e){ toast("Suppression impossible"); }
+}
+
+async function init(){
+  render();
+  if (!TOKEN){ $("#login").hidden = false; return; }
+  try {
+    const d = await api("GET", "/api/admin/frise");
+    chapitres = {}; (d.chapitres || []).forEach(c => chapitres[c.id] = c);
+    $("#login").hidden = true; charge = true; trier(); render();
+  } catch(e){ if (e.code !== "auth") toast("Chargement impossible : " + (e.message || "réseau")); }
+}
+function deconnecter(msg){
+  TOKEN = ""; try { sessionStorage.removeItem("qcm-token"); } catch(e){}
+  $("#login").hidden = false; $("#login-msg").textContent = msg || "";
+}
+$("#form-login").onsubmit = ev => {
+  ev.preventDefault();
+  TOKEN = $("#token").value.trim(); if (!TOKEN) return;
+  try { sessionStorage.setItem("qcm-token", TOKEN); } catch(e){}
+  $("#login-msg").textContent = "Connexion…"; init();
+};
+
+/* ---------- Rendu ---------- */
+function ch(){ return chapitres[actif]; }
+function notionNom(c, nid){ const n = c.notions.find(n => n.id === nid); return n ? n.titre : "—"; }
+
+function render(){ renderHaut(); renderPanneaux(); }
+
+function renderHaut(){
+  $("#tabs-classes").innerHTML = CLASSES.map(([k,l]) => {
+    const n = Object.values(chapitres).filter(c => c.classe === k).length;
+    return `<button data-classe="${k}" aria-pressed="${k===classeActive}">${l}${n?` <span class="note">${n}</span>`:""}</button>`;
+  }).join("");
+  $("#tabs-classes").querySelectorAll("[data-classe]").forEach(b => b.onclick = () => {
+    classeActive = b.dataset.classe; ls.set("frise.classe", classeActive); selExo = null; trier(); render();
+  });
+  const sel = $("#sel-chap");
+  sel.innerHTML = ordre.map(id => `<option value="${id}" ${id===actif?"selected":""}>${esc(chapitres[id].titre)}${chapitres[id].publie===false?" (masqué)":""}</option>`).join("");
+  sel.disabled = !ordre.length;
+  const c = ch();
+  $("#titre-chap").textContent = c ? c.titre : (charge ? "Aucun chapitre" : "Chargement…");
+  $("#classe-lbl").textContent = "Progression · " + nomClasse(classeActive);
+  const zone = $("#contenu");
+  if (!c){
+    zone.innerHTML = charge ? `<div class="panneau etat-vide"><strong>Aucun chapitre en ${esc(nomClasse(classeActive))}</strong>
+      <span>Saisissez son plan (les notions dans l'ordre), puis rattachez à chaque notion les exercices donnés en classe ou à la maison.</span>
+      <button class="btn primary" id="vide-nouveau">+ Nouveau chapitre</button></div>` : `<div class="panneau etat-vide">Chargement des chapitres…</div>`;
+    const b = $("#vide-nouveau"); if (b) b.onclick = ouvrirNouveau;
+    return;
+  }
+  let frise = $("#frise-zone");
+  if (!frise){
+    zone.innerHTML = `<div id="frise-zone" style="display:flex;flex-direction:column;gap:14px"></div><div class="panneaux" id="panneaux" style="margin-top:16px"></div>`;
+    frise = $("#frise-zone");
+  }
+  const tous = c.exos;
+  const n = s => tous.filter(e => e.statut === s).length;
+  const maisonAFaire = tous.filter(e => e.lieu === "maison" && e.statut !== "fait").length;
+  const cur = Math.min(c.courant, c.notions.length - 1);
+  frise.innerHTML = `
+    <div class="resume">
+      <div class="ici">${icon("i-encours",18)}<span>On en est à : <b>${esc(c.notions[cur] ? c.notions[cur].titre : "—")}</b></span></div>
+      ${lienOk(c.lien) ? `<a class="lien-cours" href="${esc(urlFichier(c.pdf || c.lien))}" target="_blank" rel="noopener" title="Ce que voient les élèves avec « Voir le cours »">Cours : ${esc((c.pdf || c.lien).split("/").pop())} ↗</a>` : `<span class="stat">Pas de cours associé</span>`}
+      <span class="stat"><strong>${cur+1}</strong> / ${c.notions.length} notions</span>
+      <span class="stat"><strong>${n("fait")}</strong> faits · <strong>${n("en_cours")}</strong> en cours · <strong>${n("a_faire")}</strong> à faire</span>
+      <span class="stat">${icon("i-maison",14).replace("<svg","<svg style='display:inline;vertical-align:-2px'")} <strong>${maisonAFaire}</strong> à la maison non terminés</span>
+      <div class="nav-ici">
+        <button class="btn" id="reculer" ${cur<=0?"disabled":""}>◂ Reculer</button>
+        <button class="btn primary" id="avancer" ${cur>=c.notions.length-1?"disabled":""}>Notion suivante ▸</button>
+      </div>
+    </div>
+    <div class="outils">
+      <div class="seg" role="group" aria-label="Filtrer par lieu">
+        ${[["tous","Tous",""],["classe","En classe","i-classe"],["maison","À la maison","i-maison"]].map(([v,l,i]) => `<button data-filtre="${v}" aria-pressed="${filtreLieu===v}">${i?icon(i,14):""}${l}</button>`).join("")}
+      </div>
+      <div class="legende">
+        <span><span class="pastille" style="background:var(--vert)"></span>Facile</span>
+        <span><span class="pastille" style="background:var(--orange)"></span>Moyen</span>
+        <span><span class="pastille" style="background:var(--rouge)"></span>Difficile</span>
+        <span style="color:var(--fg)">${icon("i-afaire",14)}À faire</span>
+        <span style="color:var(--fg)">${icon("i-encours",14)}En cours</span>
+        <span style="color:var(--fg)">${icon("i-fait",14)}Fait</span>
+        <span>${icon("i-classe",14)}Classe</span><span>${icon("i-maison",14)}Maison</span>
+      </div>
+    </div>
+    <div class="ligne-box"><div class="ligne">
+      ${c.notions.map((no, i) => {
+        const etat = c.termine ? "passe" : i < cur ? "passe" : i === cur ? "ici" : "futur";
+        const ex = tous.filter(e => e.notion === no.id);
+        const vis = ex.filter(e => filtreLieu === "tous" || e.lieu === filtreLieu);
+        const faits = ex.filter(e => e.statut === "fait").length;
+        return `<div class="station ${etat}">
+          <div class="rail">${etat==="ici"?'<span class="badge-ici">On est ici</span>':""}<button class="arret" data-aller="${i}" title="Placer la progression sur « ${esc(no.titre)} »" aria-label="Aller à ${esc(no.titre)}"></button></div>
+          ${lienOk(no.lien) ? `<a class="nom" href="${esc(urlFichier(no.lien))}" target="_blank" rel="noopener" title="Ouvrir le cours de cette notion">${esc(no.titre)} ↗</a>` : `<div class="nom">${esc(no.titre)}</div>`}
+          <div class="compte">${ex.length ? `${faits}/${ex.length} exercice${ex.length>1?"s":""} fait${faits>1?"s":""}` : "&nbsp;"}</div>
+          <div class="exos">${vis.map(chipExo).join("") || (etat!=="futur" && !ex.length ? '<div class="vide">Pas encore d\'exercice</div>' : "")}</div>
+        </div>`;
+      }).join("")}
+    </div></div>`;
+  $("#avancer").onclick = () => { c.courant = Math.min(cur+1, c.notions.length-1); sauver(c, 0); render(); };
+  $("#reculer").onclick = () => { c.courant = Math.max(cur-1, 0); sauver(c, 0); render(); };
+  frise.querySelectorAll("[data-aller]").forEach(b => b.onclick = () => { c.courant = +b.dataset.aller; sauver(c, 0); render(); });
+  frise.querySelectorAll("[data-filtre]").forEach(b => b.onclick = () => { filtreLieu = b.dataset.filtre; ls.set("frise.lieu", filtreLieu); renderHaut(); });
+  frise.querySelectorAll("[data-cycle]").forEach(b => b.onclick = () => {
+    const e = c.exos.find(x => x.id === b.dataset.cycle); if (!e) return;
+    const i = STATUTS.findIndex(s => s[0] === e.statut);
+    e.statut = STATUTS[(i+1) % 3][0]; sauver(c, 300); render();
+  });
+  frise.querySelectorAll("[data-sel]").forEach(b => b.onclick = () => { selExo = selExo === b.dataset.sel ? null : b.dataset.sel; render(); });
+}
+
+function chipExo(e){
+  const st = STATUTS.find(s => s[0] === e.statut) || STATUTS[0];
+  const li = LIEUX.find(l => l[0] === e.lieu) || LIEUX[0];
+  const di = DIFFS.find(d => d[0] === e.diff) || DIFFS[0];
+  return `<div class="exo s-${st[0]} d-${di[0]} ${selExo===e.id?"sel":""}">
+    <button class="st" data-cycle="${e.id}" title="${st[1]} — cliquer pour changer" aria-label="Statut : ${st[1]}">${icon(st[2],18)}</button>
+    <button class="corps" data-sel="${e.id}" title="${esc(e.ref)} · ${li[1]} · ${di[1]} · ${st[1]}"><span class="ref">${esc(e.ref)}</span><span class="lieu" style="display:flex;gap:3px">${fichierOk(e.fichier)?icon("i-doc",15):""}${icon(li[2],15)}</span></button>
+  </div>`;
+}
+
+function segHTML(name, opts, val, cls=""){
+  return `<div class="seg" role="group">${opts.map(([v,l,i]) => `<button type="button" class="${cls}" data-${name}="${v}" data-v="${v}" aria-pressed="${val===v}">${i && i.startsWith("i-")?icon(i,14):""}${l}</button>`).join("")}</div>`;
+}
+
+function renderPanneaux(){
+  const c = ch(); const p = $("#panneaux"); if (!c || !p) return;
+  const cur = Math.min(c.courant, c.notions.length - 1);
+  const e = c.exos.find(x => x.id === selExo);
+  const optsNotions = sel => c.notions.map(n => `<option value="${n.id}" ${n.id===sel?"selected":""}>${esc(n.titre)}</option>`).join("");
+  const nouv = window.__nouv || (window.__nouv = {lieu:"classe", diff:"vert"});
+  p.innerHTML = `
+    <section class="panneau">
+      <h2>Ajouter des exercices</h2>
+      <form id="form-exo" style="display:flex;flex-direction:column;gap:12px">
+        <div class="champ"><label for="ne-ref">Référence</label>
+          <input type="text" id="ne-ref" placeholder="Ex. 23 p.112 — ou plusieurs : 23; 27; 31 p.112" autocomplete="off"></div>
+        <div class="champ"><label for="ne-fichier">Fichier d'exercices (facultatif, PDF ou TeX)</label>
+          <div class="ligne-form"><input type="text" id="ne-fichier" placeholder="cliquez sur Choisir…" autocomplete="off" readonly>
+          <label class="btn" for="ne-choix" style="cursor:pointer">Choisir…</label><input type="file" id="ne-choix" accept=".pdf,.tex" hidden></div></div>
+        <div class="champ"><label for="ne-notion">Notion</label><select id="ne-notion">${optsNotions(c.notions[cur]?.id)}</select></div>
+        <div class="champ"><span class="lbl">Où ?</span>${segHTML("nlieu", LIEUX, nouv.lieu)}</div>
+        <div class="champ"><span class="lbl">Difficulté</span>${segHTML("ndiff", DIFFS, nouv.diff, "diff-btn")}</div>
+        <div><button class="btn primary" type="submit">Ajouter</button></div>
+        <span class="note">Séparez plusieurs exercices par des points-virgules. Le fichier choisi est envoyé en ligne automatiquement.</span>
+      </form>
+    </section>
+    <section class="panneau">
+      <h2>Exercice sélectionné</h2>
+      ${e ? `
+        <div class="champ"><label for="ex-ref">Référence</label><input type="text" id="ex-ref" value="${esc(e.ref)}"></div>
+        <div class="champ"><label for="ex-fichier">Fichier (PDF ou TeX)</label>
+          <div class="ligne-form"><input type="text" id="ex-fichier" value="${esc(e.fichier||"")}" placeholder="exos/…pdf">
+          ${fichierOk(e.fichier) ? `<a class="btn" href="${esc(urlFichier(e.fichier))}" target="_blank" rel="noopener">Ouvrir ↗</a>` : ""}</div></div>
+        <div class="champ"><label for="ex-notion">Notion</label><select id="ex-notion">${optsNotions(e.notion)}</select></div>
+        <div class="champ"><span class="lbl">Statut</span>${segHTML("estat", STATUTS.map(s=>[s[0],s[1],s[2]]), e.statut)}</div>
+        <div class="champ"><span class="lbl">Où ?</span>${segHTML("elieu", LIEUX, e.lieu)}</div>
+        <div class="champ"><span class="lbl">Difficulté</span>${segHTML("ediff", DIFFS, e.diff, "diff-btn")}</div>
+        <div class="confirm" id="ex-suppr-zone"><button class="btn danger" id="ex-suppr">Supprimer l'exercice</button></div>
+      ` : `<span class="note">Cliquez sur un exercice dans la frise pour le modifier. Le rond à gauche d'un exercice change son statut d'un clic : à faire → en cours → fait.</span>`}
+    </section>
+    <section class="panneau">
+      <h2>Plan du chapitre</h2>
+      <div class="ligne-form">
+        <input type="text" id="ch-titre" value="${esc(c.titre)}" aria-label="Titre du chapitre">
+        <select id="ch-classe" aria-label="Classe">${CLASSES.map(([k,l]) => `<option value="${k}" ${k===c.classe?"selected":""}>${l}</option>`).join("")}</select>
+      </div>
+      <span class="note">Cours : ${lienOk(c.lien) ? `<b>${esc(c.lien)}</b>` : "aucun (bouton « Importer un cours » en haut)"}${c.pdf ? ` · PDF élèves : <b>${esc(c.pdf)}</b>` : ""}</span>
+      <div class="ligne-form"><label class="btn" for="ch-pdf" style="cursor:pointer">${c.pdf ? "Remplacer le PDF du cours" : "Ajouter le PDF du cours"}</label><input type="file" id="ch-pdf" accept=".pdf" hidden></div>
+      <label class="check"><input type="checkbox" id="ch-publie" ${c.publie!==false?"checked":""}> Visible par les élèves sur le site</label>
+      <label class="check"><input type="checkbox" id="ch-termine" ${c.termine?"checked":""}> Chapitre terminé (gardé dans l'historique des élèves)</label>
+      <span class="lbl note" style="font-weight:700">Stations de la ligne</span>
+      <ul class="notions">
+        ${c.notions.map((n,i) => `<li><span class="num">${i+1}</span>
+          <input type="text" data-nnom="${n.id}" value="${esc(n.titre)}" aria-label="Notion ${i+1}">
+          <button class="ico-btn" data-nup="${i}" ${i===0?"disabled":""} aria-label="Monter">${icon("i-haut",14)}</button>
+          <button class="ico-btn" data-ndown="${i}" ${i===c.notions.length-1?"disabled":""} aria-label="Descendre">${icon("i-bas",14)}</button>
+          <button class="ico-btn" data-ndel="${n.id}" ${c.notions.length<2?"disabled":""} aria-label="Supprimer la notion">${icon("i-x",14)}</button></li>`).join("")}
+      </ul>
+      <form class="ligne-form" id="form-notion"><input type="text" id="nn-titre" placeholder="Nouvelle notion"><button class="btn" type="submit">Ajouter</button></form>
+      <span class="note" id="ndel-msg"></span>
+      <div class="confirm" id="ch-suppr-zone"><button class="btn ghost" id="ch-suppr">Supprimer ce chapitre</button></div>
+      ${local ? '<span class="note">Données enregistrées dans ce navigateur uniquement.</span>' : ""}
+    </section>`;
+
+  // Ajout d'exercices
+  p.querySelectorAll("[data-nlieu]").forEach(b => b.onclick = () => { nouv.lieu = b.dataset.nlieu; marquer(p,"nlieu",nouv.lieu); });
+  p.querySelectorAll("[data-ndiff]").forEach(b => b.onclick = () => { nouv.diff = b.dataset.ndiff; marquer(p,"ndiff",nouv.diff); });
+  $("#form-exo").onsubmit = ev => {
+    ev.preventDefault();
+    const fichier = $("#ne-fichier").value.trim();
+    if (fichier && !fichierOk(fichier)) { toast("Le fichier doit être un .pdf ou un .tex"); return; }
+    let brut = $("#ne-ref").value.trim();
+    if (!brut && fichier) brut = fichier.split("/").pop().replace(/\.(pdf|tex)$/i, "");
+    if (!brut) { $("#ne-ref").focus(); return; }
+    const parts = fichier ? [brut] : brut.split(";").map(s => s.trim()).filter(Boolean);
+    const notion = $("#ne-notion").value;
+    parts.forEach(ref => c.exos.push({id:uid("e"), ref, fichier, notion, lieu:nouv.lieu, diff:nouv.diff, statut:"a_faire", ajoute:Date.now()}));
+    sauver(c, 0); toast(parts.length > 1 ? parts.length + " exercices ajoutés" : "Exercice ajouté");
+    render(); $("#ne-ref").focus();
+  };
+
+  $("#ne-choix").onchange = async ev => {
+    const f = ev.target.files[0]; ev.target.value = ""; if (!f) return;
+    toast("Envoi de " + f.name + "…");
+    try { const nom = await envoyerFichier(f); $("#ne-fichier").value = nom; if (!$("#ne-ref").value.trim()) $("#ne-ref").value = f.name.replace(/\.(pdf|tex)$/i, ""); toast("Fichier envoyé"); }
+    catch(e){ if (e.code !== "auth") toast("Envoi impossible : " + (e.message || "réseau")); }
+  };
+
+  // Édition de l'exercice sélectionné
+  if (e){
+    $("#ex-ref").oninput = ev => { e.ref = ev.target.value; sauver(c); renderHaut(); };
+    $("#ex-fichier").onchange = ev => { e.fichier = ev.target.value.trim(); sauver(c,0); render(); };
+    $("#ex-notion").onchange = ev => { e.notion = ev.target.value; sauver(c, 0); render(); };
+    p.querySelectorAll("[data-estat]").forEach(b => b.onclick = () => { e.statut = b.dataset.estat; sauver(c,0); render(); });
+    p.querySelectorAll("[data-elieu]").forEach(b => b.onclick = () => { e.lieu = b.dataset.elieu; sauver(c,0); render(); });
+    p.querySelectorAll("[data-ediff]").forEach(b => b.onclick = () => { e.diff = b.dataset.ediff; sauver(c,0); render(); });
+    $("#ex-suppr").onclick = () => confirmer("#ex-suppr-zone", "Supprimer « " + e.ref + " » ?", () => {
+      c.exos = c.exos.filter(x => x.id !== e.id); selExo = null; sauver(c,0); render();
+    });
+  }
+
+  // Plan
+  $("#ch-titre").oninput = ev => { c.titre = ev.target.value; sauver(c); renderHaut(); };
+  $("#ch-classe").onchange = ev => { c.classe = ev.target.value; classeActive = c.classe; ls.set("frise.classe", classeActive); sauver(c,0); trier(); render(); };
+  $("#ch-pdf").onchange = async ev => {
+    const f = ev.target.files[0]; ev.target.value = ""; if (!f) return;
+    toast("Envoi du PDF…");
+    try { c.pdf = await envoyerFichier(f); if (!c.lien) c.lien = c.pdf; sauver(c,0); render(); toast("PDF envoyé"); }
+    catch(e){ if (e.code !== "auth") toast("Envoi impossible : " + (e.message || "réseau")); }
+  };
+  $("#ch-publie").onchange = ev => { c.publie = ev.target.checked; sauver(c,0); renderHaut(); };
+  $("#ch-termine").onchange = ev => { c.termine = ev.target.checked; sauver(c,0); renderHaut(); };
+
+  p.querySelectorAll("[data-nnom]").forEach(inp => inp.oninput = () => { const n = c.notions.find(n => n.id === inp.dataset.nnom); n.titre = inp.value; sauver(c); renderHaut(); });
+  const deplacer = (i, j) => {
+    const curId = c.notions[cur]?.id;
+    const [n] = c.notions.splice(i,1); c.notions.splice(j,0,n);
+    c.courant = Math.max(0, c.notions.findIndex(n => n.id === curId));
+    sauver(c,0); render();
+  };
+  p.querySelectorAll("[data-nup]").forEach(b => b.onclick = () => deplacer(+b.dataset.nup, +b.dataset.nup - 1));
+  p.querySelectorAll("[data-ndown]").forEach(b => b.onclick = () => deplacer(+b.dataset.ndown, +b.dataset.ndown + 1));
+  p.querySelectorAll("[data-ndel]").forEach(b => b.onclick = () => {
+    const id = b.dataset.ndel;
+    const nb = c.exos.filter(x => x.notion === id).length;
+    if (nb){ $("#ndel-msg").textContent = `Cette notion a ${nb} exercice${nb>1?"s":""} : déplacez-les ou supprimez-les d'abord.`; return; }
+    const curId = c.notions[cur]?.id;
+    c.notions = c.notions.filter(n => n.id !== id);
+    const k = c.notions.findIndex(n => n.id === curId);
+    c.courant = k >= 0 ? k : Math.min(cur, c.notions.length-1);
+    sauver(c,0); render();
+  });
+  $("#form-notion").onsubmit = ev => {
+    ev.preventDefault();
+    const t = $("#nn-titre").value.trim(); if (!t) return;
+    c.notions.push({id:uid("n"), titre:t}); sauver(c,0); render(); $("#nn-titre").focus();
+  };
+  $("#ch-suppr").onclick = () => confirmer("#ch-suppr-zone", "Supprimer tout le chapitre et ses exercices ?", () => supprimer(c.id));
+}
+
+function marquer(root, name, val){ root.querySelectorAll(`[data-${name}]`).forEach(b => b.setAttribute("aria-pressed", b.dataset[name] === val)); }
+function confirmer(sel, msg, ok){
+  const z = $(sel);
+  z.innerHTML = `<span>${esc(msg)}</span><button class="btn danger" data-ok>Oui, supprimer</button><button class="btn ghost" data-non>Annuler</button>`;
+  z.querySelector("[data-ok]").onclick = ok;
+  z.querySelector("[data-non]").onclick = () => renderPanneaux();
+}
+let tt;
+function toast(msg){
+  let t = $(".toast"); if (!t){ t = document.createElement("div"); t.className = "toast"; t.setAttribute("role","status"); document.body.appendChild(t); }
+  t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2200);
+}
+
+/* ---------- Chapitres ---------- */
+function ouvrirNouveau(){
+  $("#nc-classe").innerHTML = CLASSES.map(([k,l]) => `<option value="${k}" ${k===classeActive?"selected":""}>${l}</option>`).join("");
+  $("#nouveau-form").hidden = false; $("#nc-titre").focus();
+}
+
+$("#btn-nouveau").onclick = ouvrirNouveau;
+$("#nc-annuler").onclick = () => { $("#nouveau-form").hidden = true; };
+$("#form-chap").onsubmit = ev => {
+  ev.preventDefault();
+  const titre = $("#nc-titre").value.trim(); if (!titre) return;
+  const c = {id:uid("c"), titre, classe:$("#nc-classe").value, publie:true, lien:"", cree:Date.now(), courant:0,
+    notions:[{id:uid("n"), titre:"Première notion"}], exos:[]};
+  chapitres[c.id] = c; classeActive = c.classe; ls.set("frise.classe", classeActive); trier(); actif = c.id; ls.set("frise.actif", actif);
+  $("#form-chap").reset(); $("#nouveau-form").hidden = true;
+  selExo = null; sauver(c,0); trier(); render();
+  toast("Chapitre créé — renommez la première notion dans « Plan du chapitre »");
+};
+$("#sel-chap").onchange = ev => { actif = ev.target.value; ls.set("frise.actif", actif); selExo = null; render(); };
+$("#btn-proj").onclick = ev => {
+  const on = document.body.classList.toggle("proj");
+  ev.currentTarget.setAttribute("aria-pressed", on);
+  ev.currentTarget.textContent = on ? "Quitter la projection" : "Mode projection";
+  if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+  if (!on && document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+};
+
+/* ---------- Importer un cours ---------- */
+let imp = null;  // {fichier, notions:[titre]}
+function nettoyer(t){
+  const sym = {infty:"∞", to:"→", leq:"≤", le:"≤", geq:"≥", ge:"≥", neq:"≠", times:"×", pi:"π", in:"∈", R:"ℝ", N:"ℕ", Z:"ℤ", mathbb:"", ldots:"…", dots:"…", alpha:"α", beta:"β", theta:"θ", lambda:"λ", sqrt:"√", vec:"", overrightarrow:""};
+  let x = t.replace(/\\(infty|to|leq|le|geq|ge|neq|times|pi|in|ldots|dots|alpha|beta|theta|lambda|sqrt)(?![a-zA-Z])/g, (_, k) => sym[k]).replace(/\$/g, "");
+  for (let k = 0; k < 3; k++) x = x.replace(/\\[a-zA-Z]+\*?(\[[^\]]*\])?\{([^{}]*)\}/g, "$2");
+  return x.replace(/\\[a-zA-Z]+\*?/g, "").replace(/[{}~]/g, " ").replace(/\s+/g, " ")
+    .replace(/^\s*(?:[IVX]+|\d+|[A-Z])\s*[.)\-–—:]\s*/, "").trim();
+}
+function arg(src, i){ // contenu entre accolades à partir de src[i] === "{"
+  let d = 0, j = i;
+  for (; j < src.length; j++){ if (src[j] === "{") d++; else if (src[j] === "}" && --d === 0) break; }
+  return src.slice(i + 1, j);
+}
+function titres(src, cmd){
+  const out = [], re = new RegExp("\\\\" + cmd + "\\*?\\s*(\\[[^\\]]*\\])?\\s*\\{", "g"); let m;
+  while ((m = re.exec(src))) out.push(nettoyer(arg(src, m.index + m[0].length - 1)));
+  return out.filter(Boolean);
+}
+function decouper(tex){
+  const src = tex.replace(/(^|[^\\])%.*$/gm, "$1");
+  const corps = (src.match(/\\begin\{document\}([\s\S]*)\\end\{document\}/) || [, src])[1];
+  let titre = titres(src, "title")[0] || titres(corps, "chapter")[0] || titres(corps, "titre")[0] || "";
+  let n = titres(corps, "section");
+  if (n.length < 2) n = titres(corps, "subsection").length >= 2 ? titres(corps, "subsection") : n.concat(titres(corps, "partie"));
+  return {titre, notions: n.slice(0, 15)};
+}
+function nomDepuisFichier(f){ return f.replace(/\.(tex|pdf)$/i, "").replace(/[_\-]+/g, " ").replace(/^\s*\d+\s*[.\s]\s*/, "").trim(); }
+function ouvrirImport(){
+  $("#import-zone").hidden = false; $("#imp-etape1").hidden = false; $("#imp-etape2").hidden = true;
+  $("#nouveau-form").hidden = true; imp = null;
+  $("#import-zone").scrollIntoView({behavior:"smooth", block:"start"});
+}
+function fermerImport(){ $("#import-zone").hidden = true; imp = null; }
+function renderImp(){
+  $("#imp-notions").innerHTML = imp.notions.map((t,i) => `<li><span class="num">${i+1}</span>
+    <input type="text" data-inom="${i}" value="${esc(t)}" aria-label="Station ${i+1}">
+    <button class="ico-btn" type="button" data-iup="${i}" ${i===0?"disabled":""} aria-label="Monter">${icon("i-haut",14)}</button>
+    <button class="ico-btn" type="button" data-idown="${i}" ${i===imp.notions.length-1?"disabled":""} aria-label="Descendre">${icon("i-bas",14)}</button>
+    <button class="ico-btn" type="button" data-idel="${i}" aria-label="Retirer">${icon("i-x",14)}</button></li>`).join("")
+    || `<li class="note">Aucune partie trouvée dans le fichier : ajoutez les stations à la main${sampleFn ? " ou demandez à Claude" : ""}.</li>`;
+  const z = $("#imp-notions");
+  z.querySelectorAll("[data-inom]").forEach(i => i.oninput = () => { imp.notions[+i.dataset.inom] = i.value; });
+  const mv = (i,j) => { const [x] = imp.notions.splice(i,1); imp.notions.splice(j,0,x); renderImp(); };
+  z.querySelectorAll("[data-iup]").forEach(b => b.onclick = () => mv(+b.dataset.iup, +b.dataset.iup - 1));
+  z.querySelectorAll("[data-idown]").forEach(b => b.onclick = () => mv(+b.dataset.idown, +b.dataset.idown + 1));
+  z.querySelectorAll("[data-idel]").forEach(b => b.onclick = () => { imp.notions.splice(+b.dataset.idel,1); renderImp(); });
+}
+const sampleFn = true;   // découpage par Claude via le Worker
+$("#btn-import").onclick = ouvrirImport;
+$("#imp-annuler1").onclick = fermerImport;
+$("#imp-annuler2").onclick = fermerImport;
+$("#imp-fichier").onchange = async ev => {
+  const f = ev.target.files[0]; ev.target.value = ""; if (!f) return;
+  const estTex = /\.tex$/i.test(f.name);
+  let nom;
+  $("#imp-etape1").querySelector("label").textContent = "Envoi du fichier…";
+  try { nom = await envoyerFichier(f); }
+  catch(e){ if (e.code !== "auth") toast("Envoi impossible : " + (e.message || "réseau")); return; }
+  finally { $("#imp-etape1").querySelector("label").textContent = "Choisir le cours (.tex de préférence)"; }
+  const texte = estTex ? await f.text() : "";
+  const d = estTex ? decouper(texte) : {titre:"", notions:[]};
+  imp = {fichier:nom, pdf: estTex ? "" : nom, tex:texte, notions:d.notions};
+  $("#imp-pdf-zone").hidden = !estTex; $("#imp-pdf-nom").textContent = "Les élèves verront le PDF, avec figures et encadrés. Sans PDF, ils verront le .tex mis en forme.";
+  $("#imp-titre").value = d.titre || nomDepuisFichier(f.name);
+  $("#imp-classe").innerHTML = CLASSES.map(([k,l]) => `<option value="${k}" ${k===classeActive?"selected":""}>${l}</option>`).join("");
+  $("#imp-nomfichier").textContent = "Fichier envoyé : " + imp.fichier;
+  $("#imp-msg").textContent = estTex ? (d.notions.length ? `${d.notions.length} parties trouvées dans le cours.` : "") : "PDF : le découpage ne peut pas être lu automatiquement, saisissez les stations.";
+  $("#imp-claude").hidden = !(sampleFn && estTex);
+  $("#imp-etape1").hidden = true; $("#imp-etape2").hidden = false;
+  renderImp();
+  if (estTex && d.notions.length < 2 && sampleFn) $("#imp-claude").click();
+};
+$("#imp-pdf").onchange = async ev => {
+  const f = ev.target.files[0]; ev.target.value = ""; if (!f || !imp) return;
+  $("#imp-pdf-nom").textContent = "Envoi du PDF…";
+  try { imp.pdf = await envoyerFichier(f); $("#imp-pdf-nom").textContent = "PDF envoyé : " + imp.pdf; }
+  catch(e){ $("#imp-pdf-nom").textContent = "Envoi du PDF impossible."; }
+};
+$("#imp-ajout").onclick = () => { imp.notions.push(""); renderImp(); const l = $("#imp-notions").querySelectorAll("[data-inom]"); l[l.length-1]?.focus(); };
+$("#imp-claude").onclick = async () => {
+  if (!sampleFn || !imp) return;
+  const b = $("#imp-claude"); b.disabled = true; $("#imp-msg").textContent = "Claude lit le cours…";
+  try {
+    const r = await api("POST", "/api/admin/frise/decoupage", {tex: imp.tex});
+    if (r && Array.isArray(r.notions) && r.notions.length){
+      imp.notions = r.notions.map(String).slice(0, 15);
+      if (r.titre && !$("#imp-titre").value.trim()) $("#imp-titre").value = r.titre;
+      $("#imp-msg").textContent = "Découpage proposé par Claude : modifiez-le si besoin.";
+      renderImp();
+    } else $("#imp-msg").textContent = "Pas de proposition exploitable.";
+  } catch(e){
+    if (e.code !== "auth") $("#imp-msg").textContent = "Claude n'a pas pu proposer de découpage" + (e.message ? " (" + e.message + ")" : "") + ".";
+  }
+  b.disabled = false;
+};
+$("#imp-valider").onclick = () => {
+  if (!imp) return;
+  const titre = $("#imp-titre").value.trim();
+  const notions = imp.notions.map(t => String(t).trim()).filter(Boolean);
+  if (!titre){ $("#imp-titre").focus(); return; }
+  if (!notions.length){ $("#imp-msg").textContent = "Ajoutez au moins une station."; return; }
+  const c = {id:uid("c"), titre, classe:$("#imp-classe").value, publie:true, lien:imp.fichier, pdf:imp.pdf || "", cree:Date.now(), courant:0,
+    notions:notions.map(t => ({id:uid("n"), titre:t})), exos:[]};
+  chapitres[c.id] = c; classeActive = c.classe; ls.set("frise.classe", classeActive); trier();
+  actif = c.id; ls.set("frise.actif", actif); selExo = null;
+  sauver(c, 0); fermerImport(); trier(); render();
+  toast("Ligne créée : les élèves la voient déjà");
+};
+
+init();
+})();
+</script>
+
+</body>
+</html>
