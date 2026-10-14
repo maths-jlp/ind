@@ -1,9 +1,38 @@
 {
- "maj": "2026-10-14T20:04:38.797495Z",
+ "maj": "2026-10-14T20:12:39.821Z",
  "classes": {
   "4eme": [],
   "1ere": [],
   "terminale": [
+   {
+    "titre": "cours complts derivation Ter",
+    "lien": "cours/cours_complts_derivation_Ter.tex",
+    "courant": 0,
+    "termine": false,
+    "notions": [
+     {
+      "id": "nmv8jp7pv83bm",
+      "titre": "Dérivée d'une fonction composée",
+      "lien": ""
+     },
+     {
+      "id": "nmv8jp7pvo76c",
+      "titre": "Dérivée seconde",
+      "lien": ""
+     },
+     {
+      "id": "nmv8jp7pv3obn",
+      "titre": "Courbes convexes",
+      "lien": ""
+     },
+     {
+      "id": "nmv8jp7pvtcdy",
+      "titre": "Convexité",
+      "lien": ""
+     }
+    ],
+    "exos": []
+   },
    {
     "titre": "Limites de fonctions (exemple)",
     "lien": "",
