@@ -13,6 +13,7 @@
 :root{
   --bg:#ffffff; --surface:#ffffff; --surface-2:#eef1f6; --fg:#16202e; --muted:#5b6778; --rule:#d3dae4;
   --line:#1f5fbf; --line-soft:#c9d8f0; --future:#c3ccd8;
+  --ratp:#00a88f; --ratp-fond:rgba(0,168,143,.14);
   --vert:#2e9d57; --orange:#e08a1e; --rouge:#d23c3c;
   --vert-bg:#e5f4eb; --orange-bg:#fcf0de; --rouge-bg:#fbe5e5;
   --f-display:"Overpass","Segoe UI",system-ui,sans-serif;
@@ -28,7 +29,7 @@ button{cursor:pointer}
 :focus-visible{outline:3px solid var(--line);outline-offset:2px;border-radius:6px}
 svg{display:block}
 
-.bandeau{border-bottom:2px solid var(--rule);background:var(--surface);padding-block:8px 6px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:6px}
+.bandeau{border-bottom:3px solid var(--ratp);background:var(--ratp-fond);padding-block:8px 6px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:6px}
 .haut{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
 .classe{font-family:var(--f-display);font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--line);border-radius:6px;padding:3px 8px}
 h1{font-family:var(--f-display);font-weight:800;font-size:19px;margin:0;line-height:1.15}
