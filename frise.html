@@ -39,6 +39,7 @@ h1{font-family:var(--f-display);font-weight:800;font-size:19px;margin:0;line-hei
 select{background:var(--surface);border:1px solid var(--rule);border-radius:7px;padding:4px 8px;font-size:13px}
 .btn{background:var(--surface);border:1px solid var(--rule);border-radius:7px;padding:4px 10px;font-weight:700;font-size:13px;text-decoration:none;color:var(--fg)}
 .btn:hover{border-color:var(--line)}
+.btn:disabled{opacity:.4;cursor:default}
 .lien-cours{color:var(--line);border-color:var(--line)}
 .legende{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);align-items:center}
 .legende span{display:inline-flex;gap:4px;align-items:center}
@@ -111,7 +112,9 @@ button.exo:hover{border-color:var(--line)}
     <span class="ici" id="ici"></span>
     <div class="droite">
       <span id="lien-cours"></span>
+      <button class="btn" id="prec" title="Chapitre précédent">◂ Ligne d'avant</button>
       <select id="sel-chap" aria-label="Chapitre"></select>
+      <button class="btn" id="suiv" title="Chapitre suivant">Ligne d'après ▸</button>
       <button class="btn" id="btn-plein">Plein écran</button>
     </div>
   </div>
@@ -140,6 +143,7 @@ const DIFFS = {vert:"Facile", orange:"Moyen", rouge:"Difficile"};
 const LIEUX = {classe:["En classe","i-classe"], maison:["À la maison","i-maison"]};
 const CLASSES = {"4eme":"4ème", "1ere":"1ère Spé", "terminale":"Terminale Spé"};
 const lienOk = u => /^https?:\/\//i.test(String(u||"")) || /^[\w.\-\/ %]+\.(pdf|html?|tex)$/i.test(String(u||""));
+const lisible = u => /\.(pdf|tex)$/i.test(String(u||""));
 const icon = (id, w=14) => `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const classe = new URLSearchParams(location.search).get("classe") || "terminale";
 let chapitres = [], idx = 0;
@@ -154,28 +158,33 @@ $("#legende").innerHTML =
    <span>${icon("i-classe")}En classe</span><span>${icon("i-maison")}À la maison</span><span>${icon("i-doc")}Fichier à ouvrir</span>`;
 
 fetch("progression-data.json?v=" + Date.now()).then(r => r.json()).then(d => {
-  chapitres = (d.classes && d.classes[classe]) || [];
+  chapitres = ((d.classes && d.classes[classe]) || []).slice().reverse();   // ordre chronologique
+  idx = Math.max(0, chapitres.length - 1);   // le plus récent par défaut
   if (d.maj) $("#maj").textContent = "Mis à jour le " + new Date(d.maj).toLocaleDateString("fr-FR", {day:"numeric", month:"long"});
   const sel = $("#sel-chap");
-  sel.innerHTML = chapitres.map((c,i) => `<option value="${i}">${esc(c.titre)}</option>`).join("");
-  sel.hidden = chapitres.length < 2;
+  sel.innerHTML = chapitres.map((c,i) => `<option value="${i}">${i+1}. ${esc(c.titre)}${c.termine ? " ✓" : ""}</option>`).join("");
   sel.onchange = () => { idx = +sel.value; render(); };
+  $("#prec").onclick = () => { if (idx > 0){ idx--; render(); } };
+  $("#suiv").onclick = () => { if (idx < chapitres.length - 1){ idx++; render(); } };
   render();
 }).catch(() => { $("#titre-chap").textContent = "Progression indisponible"; });
 
 function render(){
   const c = chapitres[idx];
   if (!c){ $("#titre-chap").textContent = "Aucun chapitre pour l'instant"; $("#ligne").innerHTML = ""; return; }
-  const cur = Math.min(c.courant, c.notions.length - 1);
+  const cur = c.termine ? c.notions.length : Math.min(c.courant, c.notions.length - 1);
   $("#titre-chap").textContent = c.titre;
-  $("#ici").innerHTML = c.notions[cur] ? `On en est à : <b>${esc(c.notions[cur].titre)}</b>` : "";
-  $("#lien-cours").innerHTML = lienOk(c.lien) ? `<a class="btn lien-cours" href="${esc(c.lien)}" target="_blank" rel="noopener">Cours ↗</a>` : "";
+  $("#ici").innerHTML = c.termine ? "<b>Chapitre terminé</b>" : c.notions[cur] ? `On en est à : <b>${esc(c.notions[cur].titre)}</b>` : "";
+  $("#sel-chap").value = idx;
+  $("#sel-chap").hidden = $("#prec").hidden = $("#suiv").hidden = chapitres.length < 2;
+  $("#prec").disabled = idx <= 0; $("#suiv").disabled = idx >= chapitres.length - 1;
+  $("#lien-cours").innerHTML = lienOk(c.lien) ? (lisible(c.lien) ? `<button class="btn lien-cours" data-cours="${esc(c.lien)}" data-titre="${esc("Cours — " + c.titre)}">Voir le cours</button>` : `<a class="btn lien-cours" href="${esc(c.lien)}" target="_blank" rel="noopener">Voir le cours ↗</a>`) : "";
   $("#ligne").innerHTML = c.notions.map((no, i) => {
     const etat = i < cur ? "passe" : i === cur ? "ici-st" : "futur";
     const ex = c.exos.filter(e => e.notion === no.id);
     return `<div class="station ${etat}">
       <div class="rail"><span class="arret"></span></div>
-      ${lienOk(no.lien) ? `<a class="nom" href="${esc(no.lien)}" target="_blank" rel="noopener">${esc(no.titre)} ↗</a>` : `<div class="nom">${esc(no.titre)}</div>`}
+      ${lienOk(no.lien) ? (lisible(no.lien) ? `<button class="nom" style="background:none;border:0;border-bottom:2px solid var(--line-soft);padding:0;cursor:pointer" data-cours="${esc(no.lien)}" data-titre="${esc(no.titre)}">${esc(no.titre)}</button>` : `<a class="nom" href="${esc(no.lien)}" target="_blank" rel="noopener">${esc(no.titre)} ↗</a>`) : `<div class="nom">${esc(no.titre)}</div>`}
       <div class="exos">${ex.map((e, k) => {
         const st = STATUTS[e.statut] || STATUTS.a_faire, li = LIEUX[e.lieu] || LIEUX.classe;
         const tip = `${esc(e.ref)} · ${li[0]} · ${DIFFS[e.diff]||""} · ${st[0]}`;
@@ -186,6 +195,7 @@ function render(){
       }).join("")}</div>
     </div>`;
   }).join("");
+  document.querySelectorAll("[data-cours]").forEach(b => b.onclick = () => ouvrir({ref:b.dataset.titre, fichier:b.dataset.cours}));
   $("#ligne").querySelectorAll("[data-ouvrir]").forEach(b => b.onclick = () => {
     const [i, k] = b.dataset.ouvrir.split(":").map(Number);
     const ex = c.exos.filter(e => e.notion === c.notions[i].id)[k];

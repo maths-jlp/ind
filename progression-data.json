@@ -1,5 +1,5 @@
 {
- "maj": "2026-10-14T19:18:15.581734Z",
+ "maj": "2026-10-14T20:04:38.797495Z",
  "classes": {
   "4eme": [],
   "1ere": [],
@@ -8,6 +8,7 @@
     "titre": "Limites de fonctions (exemple)",
     "lien": "",
     "courant": 3,
+    "termine": false,
     "notions": [
      {
       "id": "n1",
