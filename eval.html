@@ -21,6 +21,7 @@
   button:disabled { opacity:.5; cursor:default; }
   .q-num { font-size:.85rem; color:var(--mute); margin-bottom:4px; }
   .q-text { margin-bottom:10px; font-weight:600; }
+  .q-code { margin:4px 0 12px; padding:12px 14px; background:#1e2633; color:#e8eef7; border-radius:8px; font:14px/1.5 "JetBrains Mono", Consolas, "Courier New", monospace; white-space:pre; overflow-x:auto; tab-size:4; }
   label.choice { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin:6px 0; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
   label.choice:has(input:checked) { border-color:var(--acc); background:color-mix(in srgb, var(--acc) 10%, transparent); }
   label.choice input { margin-top:5px; flex:none; }
@@ -129,6 +130,7 @@ function render() {
     const n = document.createElement("div"); n.className = "q-num"; n.textContent = `Question ${i + 1} / ${qs.length}`;
     const t = document.createElement("div"); t.className = "q-text"; t.textContent = q.text;
     card.append(n, t);
+    if (q.code){ const pre = document.createElement("pre"); pre.className = "q-code"; pre.textContent = q.code; card.append(pre); }
     if (q.image) card.append(makeImg(q.image, "q-img"));
     const list = document.createElement("div");
     list.className = "choices" + (q.choices.some((c) => c.image) ? " grid" : "");
@@ -149,6 +151,7 @@ function render() {
     if (q.multiple) { const h = document.createElement("div"); h.className = "hint"; h.textContent = "Plusieurs réponses possibles."; card.append(h); }
     box.append(card);
   });
+  if (!window.renderMathInElement) window.addEventListener("load", () => window.renderMathInElement && renderMathInElement(box, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }, { left: "\\(", right: "\\)", display: false }, { left: "\\[", right: "\\]", display: true }] }), { once: true });
   if (window.renderMathInElement) {
     renderMathInElement(box, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }, { left: "\\(", right: "\\)", display: false }, { left: "\\[", right: "\\]", display: true }] });
   }

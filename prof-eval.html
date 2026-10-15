@@ -327,6 +327,7 @@ function renderPreview() {
     gen.questions.map((q, i) =>
       `<div class="qprev"><div class="qh"><span>${esc(q.id)}</span><button class="sec" style="padding:1px 10px" data-rm="${i}">Retirer</button></div>` +
       `<div class="qt">${esc(q.text)}</div>` +
+      (q.code ? `<pre style="background:#1e2633;color:#e8eef7;padding:10px 12px;border-radius:8px;font:13px/1.5 Consolas,monospace;white-space:pre;overflow-x:auto">${esc(q.code)}</pre>` : "") +
       (q.image ? `<div><img alt="" src="${esc(q.image)}"></div>` : "") +
       "<ul>" + q.choices.map((c) =>
         `<li class="${q.correct.includes(c.id) ? "good" : ""}"><b class="k">${esc(c.id)}</b>${esc(c.text || "")}` +
