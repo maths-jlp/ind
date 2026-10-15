@@ -73,6 +73,9 @@ a.nom{border-bottom:2px solid var(--line-soft)}
 .ref{font-family:var(--f-mono);font-weight:600}
 button.exo{font:inherit;font-size:12px}
 button.exo:hover{border-color:var(--line)}
+.exo.qcm-chip{--c:var(--ratp);background:var(--ratp);color:#fff;border-color:var(--ratp)}
+.exo.qcm-chip .ref{color:#fff}
+.exo.qcm-chip:hover{background:#0f7a5d}
 .fichier .ref{text-decoration:underline;text-decoration-color:var(--c);text-underline-offset:2px}
 
 .tableau{min-height:72vh}
@@ -164,7 +167,7 @@ $("#legende").innerHTML =
    <span><span class="pastille" style="background:var(--orange)"></span>Moyen</span>
    <span><span class="pastille" style="background:var(--rouge)"></span>Difficile</span><span>·</span>
    <span>${icon("i-afaire")}À faire</span><span>${icon("i-encours")}En cours</span><span>${icon("i-fait")}Fait</span><span>·</span>
-   <span>${icon("i-classe")}En classe</span><span>${icon("i-maison")}À la maison</span><span>${icon("i-doc")}Fichier à ouvrir</span>`;
+   <span>${icon("i-classe")}En classe</span><span>${icon("i-maison")}À la maison</span><span>${icon("i-doc")}Fichier à ouvrir</span><span style="color:var(--ratp);font-weight:700">${icon("i-fait")}QCM pour se tester</span>`;
 
 fetch(API + "/api/frise/" + encodeURIComponent(classe)).then(r => r.json()).then(d => {
   const cle = x => x.ordre ?? x.cree ?? 0;
@@ -201,7 +204,7 @@ function render(){
     return `<div class="station ${etat}">
       <div class="rail"><span class="arret"></span></div>
       ${lienOk(no.lien) ? (lisible(no.lien) ? `<button class="nom" style="background:none;border:0;border-bottom:2px solid var(--line-soft);padding:0;cursor:pointer" data-cours="${esc(no.lien)}" data-titre="${esc(no.titre)}">${esc(no.titre)}</button>` : `<a class="nom" href="${esc(no.lien)}" target="_blank" rel="noopener">${esc(no.titre)} ↗</a>`) : `<div class="nom">${esc(no.titre)}</div>`}
-      <div class="exos">${ex.map((e, k) => {
+      <div class="exos">${no.qcm && etat !== "futur" ? `<a class="exo qcm-chip" href="entrainement.html?q=${encodeURIComponent(no.qcm)}" title="Teste-toi sur cette partie du cours : 5 questions"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg><span class="ref">QCM · 5 questions</span></a>` : ""}${ex.map((e, k) => {
         const st = STATUTS[e.statut] || STATUTS.a_faire, li = LIEUX[e.lieu] || LIEUX.classe;
         const tip = `${esc(e.ref)} · ${li[0]} · ${DIFFS[e.diff]||""} · ${st[0]}`;
         const inner = `<span class="st">${icon(st[1])}</span><span class="ref">${esc(e.ref)}</span>${e.fichier ? `<span class="lieu">${icon("i-doc")}</span>` : ""}<span class="lieu">${icon(li[1])}</span>`;

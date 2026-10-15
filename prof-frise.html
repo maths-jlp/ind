@@ -292,13 +292,49 @@ const timers = {};
 
 /* ---------- Persistance ---------- */
 const texCache = {};   // nom du .tex -> titres du cours (null si illisible)
+const texBrut = {};    // nom du .tex -> texte complet
+const NIVEAUX_QCM = {"4eme":"4ème", "1ere":"1ère spé", "terminale":"Terminale spé"};
+// Texte de la partie du cours d'une station (de son titre jusqu'au titre de la station suivante dans le .tex).
+function partieDuCours(tex, c, n){
+  const src = String(tex || "");
+  const d = src.search(/\\begin\{document\}/), f = src.search(/\\end\{document\}/);
+  const corpsDeb = d >= 0 ? d + 16 : 0;
+  const corps = src.slice(corpsDeb, f >= 0 ? f : src.length);
+  const sansCom = corps.replace(/(^|[^\\])%.*$/gm, (m, a) => a + " ".repeat(m.length - a.length));
+  const pos = [...sansCom.matchAll(/\\(?:sub){0,2}section\*?\s*[\[{]/g)].map(m => m.index);
+  if (!Number.isInteger(n.ancre) || n.ancre >= pos.length) return "";
+  const triees = [...new Set(c.notions.map(x => x.ancre).filter(a => Number.isInteger(a) && a < pos.length))].sort((a, b) => a - b);
+  const k = triees.indexOf(n.ancre);
+  const fin = k + 1 < triees.length ? pos[triees[k + 1]] : corps.length;
+  return src.slice(0, corpsDeb) + "\n" + corps.slice(pos[n.ancre], fin) + "\n\\end{document}\n";
+}
+async function genererQcm(c, n, bouton){
+  const tex = texBrut[c.lien];
+  if (!tex){ toast("Cours illisible"); return; }
+  const partie = partieDuCours(tex, c, n);
+  if (!partie){ toast("Associez d'abord cette station à une partie du cours"); return; }
+  const id = ("f-" + c.id + "-" + n.id).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40);
+  const niveau = NIVEAUX_QCM[c.classe] || "";
+  if (bouton){ bouton.disabled = true; bouton.textContent = "Génération… (≈ 30 s)"; }
+  try {
+    const g = await api("POST", "/api/admin/generate", {tex: partie, n: 5, niveau, titre: c.titre + " — " + n.titre, difficulte: "moyen"});
+    await api("PUT", "/api/admin/quiz/" + encodeURIComponent(id), g.quiz);
+    await api("POST", "/api/admin/quiz/" + encodeURIComponent(id) + "/practice", {on: true, level: niveau});
+    n.qcm = id; sauver(c, 0); renderPanneaux(); renderHaut();
+    toast("QCM créé pour « " + n.titre + " » : il apparaît sous la station");
+  } catch(e){
+    if (e.code !== "auth") toast("QCM impossible : " + (e.message || "réseau"));
+    if (bouton){ bouton.disabled = false; bouton.textContent = "Générer un QCM"; }
+  }
+}
 function coursTex(c){ return c && /\.tex$/i.test(c.lien || ""); }
 async function chargerTitres(nom){
   texCache[nom] = null;
   try {
     const r = await fetch(API + "/api/admin/frise-file/" + encodeURIComponent(nom), {headers:{Authorization:"Bearer " + TOKEN}});
     if (!r.ok) throw 0;
-    texCache[nom] = titresCours(await r.text());
+    const t = await r.text(); texBrut[nom] = t;
+    texCache[nom] = titresCours(t);
   } catch(e){ texCache[nom] = false; }
   if (!document.activeElement || !document.activeElement.closest("#panneaux")) renderPanneaux();
 }
@@ -531,7 +567,11 @@ function renderPanneaux(){
           <button class="ico-btn" data-nup="${i}" ${i===0?"disabled":""} aria-label="Monter">${icon("i-haut",14)}</button>
           <button class="ico-btn" data-ndown="${i}" ${i===c.notions.length-1?"disabled":""} aria-label="Descendre">${icon("i-bas",14)}</button>
           <button class="ico-btn" data-ndel="${n.id}" ${c.notions.length<2?"disabled":""} aria-label="Supprimer la notion">${icon("i-x",14)}</button>
-          ${H ? `<select class="url" data-nanc="${n.id}" aria-label="Partie du cours où commence la notion ${i+1}">${optionsAncres(H, Number.isInteger(n.ancre) ? n.ancre : null)}</select>` : ""}</li>`).join("")}
+          ${H ? `<select class="url" data-nanc="${n.id}" aria-label="Partie du cours où commence la notion ${i+1}">${optionsAncres(H, Number.isInteger(n.ancre) ? n.ancre : null)}</select>
+          <span class="url" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:0;border:0">
+            <button class="btn" type="button" data-nqcm="${n.id}" ${Number.isInteger(n.ancre) ? "" : "disabled title=\"Choisissez d'abord la partie du cours\""}>${n.qcm ? "Refaire le QCM" : "Générer un QCM"}</button>
+            ${n.qcm ? `<a class="note" href="entrainement.html?q=${encodeURIComponent(n.qcm)}" target="_blank" rel="noopener">QCM en ligne ✓ — voir ↗</a>` : `<span class="note">5 questions sur cette partie</span>`}
+          </span>` : ""}</li>`).join("")}
       </ul>
       <form class="ligne-form" id="form-notion"><input type="text" id="nn-titre" placeholder="Nouvelle notion"><button class="btn" type="submit">Ajouter</button></form>
       <span class="note" id="ndel-msg"></span>
@@ -600,6 +640,9 @@ function renderPanneaux(){
   $("#ch-tot").onclick = () => deplacerChap(-1);
   $("#ch-tard").onclick = () => deplacerChap(1);
 
+  p.querySelectorAll("[data-nqcm]").forEach(b => b.onclick = () => {
+    const n = c.notions.find(n => n.id === b.dataset.nqcm); if (n) genererQcm(c, n, b);
+  });
   p.querySelectorAll("[data-nanc]").forEach(sel => sel.onchange = () => {
     const n = c.notions.find(n => n.id === sel.dataset.nanc); if (!n) return;
     if (sel.value === "") delete n.ancre; else n.ancre = +sel.value;
@@ -774,7 +817,7 @@ $("#imp-fichier").onchange = async ev => {
   const texte = estTex ? await f.text() : "";
   const d = estTex ? decouper(texte) : {titre:"", notions:[]};
   imp = {fichier:nom, pdf: estTex ? "" : nom, tex:texte, notions:d.notions, ancres:d.ancres || d.notions.map(() => null), H:d.H || []};
-  if (estTex) texCache[nom] = imp.H;
+  if (estTex){ texCache[nom] = imp.H; texBrut[nom] = texte; }
   $("#imp-pdf-zone").hidden = !estTex; $("#imp-pdf-nom").textContent = "Les élèves verront le PDF, avec figures et encadrés. Sans PDF, ils verront le .tex mis en forme.";
   $("#imp-titre").value = d.titre || nomDepuisFichier(f.name);
   $("#imp-classe").innerHTML = CLASSES.map(([k,l]) => `<option value="${k}" ${k===classeActive?"selected":""}>${l}</option>`).join("");
