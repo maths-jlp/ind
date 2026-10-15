@@ -140,7 +140,10 @@ a{color:inherit;text-decoration:none}
 const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
 document.querySelectorAll("[data-encours]").forEach(el => {
   fetch(API + "/api/frise/" + el.dataset.encours).then(r => r.json()).then(d => {
-    const ch = (d.chapitres || []).filter(c => !c.termine).pop() || (d.chapitres || []).slice(-1)[0];
+    // Même règle que la ligne de la classe : dans l'ordre de l'année, le dernier chapitre ni terminé ni fermé.
+    const cle = x => x.ordre ?? x.cree ?? 0;
+    const liste = (d.chapitres || []).slice().sort((a, b) => cle(a) - cle(b));
+    const ch = liste.filter(c => !c.termine && !c.ferme).pop();
     if (ch) el.textContent = "En ce moment : " + ch.titre;
   }).catch(() => {});
 });
