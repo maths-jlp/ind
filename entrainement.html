@@ -89,6 +89,8 @@ async function showList() {
   setStatus("Chargement…");
   try {
     const r = await fetch(`${API}/api/practice`); const d = await r.json();
+    // Les QCM des stations de la frise (identifiant "f-…") ne s'ouvrent que depuis la frise.
+    if (d.quizzes) d.quizzes = d.quizzes.filter((q) => !String(q.id).startsWith("f-"));
     const box = $("list"); box.innerHTML = "";
     if (!d.quizzes || !d.quizzes.length) { setStatus("Aucun QCM d'entraînement pour le moment."); return; }
     setStatus("");
