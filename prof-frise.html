@@ -315,11 +315,7 @@ function partieDuCours(tex, c, n){
 }
 // Un QCM de station n'est ouvert aux élèves que lorsque la ligne a atteint la station.
 // Un chapitre placé après le chapitre « On est ici » est fermé aux élèves.
-function chapVerrouille(c){
-  const liste = Object.values(chapitres).filter(x => x.classe === c.classe && x.publie !== false).sort((a, b) => cleOrdre(a) - cleOrdre(b));
-  const k = liste.findIndex(x => x.ici);
-  return k >= 0 && liste.indexOf(c) > k;
-}
+function chapVerrouille(c){ return !!c.ferme; }
 async function syncQcm(c){
   const cur = c.termine ? c.notions.length : (c.courant || 0);
   const niveau = NIVEAUX_QCM[c.classe] || "";
@@ -626,8 +622,7 @@ function renderPanneaux(){
         <select id="ch-cours">${'<option value="cache">Caché aux élèves</option><option value="progressif">Jusqu\'à la notion en cours</option><option value="complet">En entier</option>'.replace(`value="${c.cours || "cache"}"`, `value="${c.cours || "cache"}" selected`)}</select></div>` : ""}
       <div class="ligne-form"><label class="btn" for="ch-pdf" style="cursor:pointer">${c.pdf ? "Remplacer le PDF du cours" : "Ajouter le PDF du cours"}</label><input type="file" id="ch-pdf" accept=".pdf" hidden></div>
       <label class="check"><input type="checkbox" id="ch-publie" ${c.publie!==false?"checked":""}> Visible par les élèves sur le site</label>
-      <div class="ligne-form">${c.ici ? `<span class="note" style="font-weight:700;color:var(--vert)">📍 Chapitre « On est ici » de la ligne : les suivants sont visibles mais fermés</span><button class="btn ghost" type="button" id="ch-ici-off">Retirer</button>`
-        : `<button class="btn" type="button" id="ch-ici">📍 Placer « On est ici » sur ce chapitre</button>${chapVerrouille(c) ? `<span class="note">Ce chapitre est encore fermé aux élèves</span>` : ""}`}</div>
+      <label class="check"><input type="checkbox" id="ch-ferme" ${c.ferme ? "checked" : ""}> 🔒 Chapitre fermé : affiché sur la ligne, contenu inaccessible aux élèves</label>
       <div class="ligne-form"><span class="note" style="font-weight:700">Place sur la ligne de la classe</span>
         <button class="btn" type="button" id="ch-tot">◂ Plus tôt dans l'année</button>
         <button class="btn" type="button" id="ch-tard">Plus tard ▸</button></div>
@@ -708,10 +703,12 @@ function renderPanneaux(){
       if (!!x.ici !== v){ if (v) x.ici = true; else delete x.ici; }
       sauver(x, 0);   // chaque enregistrement ouvre/ferme aussi les QCM concernés
     });
-    render(); toast(on ? "« On est ici » placé sur « " + c.titre + " »" : "« On est ici » retiré : tous les chapitres sont ouverts");
+    render(); toast(on ? "📍 « On est ici » épinglé sur « " + c.titre + " »" : "Épingle retirée : « On est ici » revient au dernier chapitre en cours");
   };
-  const bi = $("#ch-ici"); if (bi) bi.onclick = () => placerIci(true);
-  const bo = $("#ch-ici-off"); if (bo) bo.onclick = () => placerIci(false);
+  $("#ch-ferme").onchange = ev => {
+    if (ev.target.checked) c.ferme = true; else delete c.ferme;
+    sauver(c, 0); renderHaut(); toast(c.ferme ? "« " + c.titre + " » est fermé aux élèves" : "« " + c.titre + " » est ouvert aux élèves");
+  };
   const deplacerChap = sens => {
     const liste = Object.values(chapitres).filter(x => x.classe === c.classe).sort((a,b) => cleOrdre(a) - cleOrdre(b));
     const i = liste.indexOf(c), j = i + sens;

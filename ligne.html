@@ -97,19 +97,18 @@ fetch(API + "/api/frise/" + classe).then(r => r.json()).then(d => {
   const ch = (d.chapitres || []).slice().sort((a, b) => cle(a) - cle(b));
   const zone = document.getElementById("zone");
   if (!ch.length){ zone.innerHTML = '<div class="vide">La ligne est encore en travaux : aucun chapitre pour l\'instant.</div>'; return; }
-  // Chapitre « On est ici » : celui choisi par le prof, sinon le plus récent non terminé.
-  let ici = ch.findIndex(c => c.ici);
-  const choisi = ici >= 0;
-  if (!choisi) for (let i = ch.length - 1; i >= 0; i--) if (!ch[i].termine){ ici = i; break; }
+  // « On est ici » : le chapitre le plus récent ni terminé ni fermé.
+  let ici = -1;
+  for (let i = ch.length - 1; i >= 0; i--) if (!ch[i].termine && !ch[i].ferme){ ici = i; break; }
   zone.innerHTML = '<div class="ligne-box"><div class="ligne">' + ch.map((c, i) => {
-    const verrou = choisi && i > ici;
-    const etat = verrou ? "verrou" : c.termine ? "fait" : i === ici ? "ici" : "";
+    const verrou = !!c.ferme;
+    const etat = verrou ? "verrou" : i === ici ? "ici" : c.termine ? "fait" : "";
     const n = c.notions ? c.notions.length : 0;
-    const info = c.termine ? "Terminé" : i === ici ? (c.notions[Math.min(c.courant, n - 1)] ? "En ce moment : " + c.notions[Math.min(c.courant, n - 1)].titre : "En cours") : n + " notion" + (n > 1 ? "s" : "");
+    const info = i === ici && !c.termine ? (c.notions[Math.min(c.courant, n - 1)] ? "En ce moment : " + c.notions[Math.min(c.courant, n - 1)].titre : "En cours") : c.termine ? "Terminé" : i === ici ? (c.notions[Math.min(c.courant, n - 1)] ? "En ce moment : " + c.notions[Math.min(c.courant, n - 1)].titre : "En cours") : n + " notion" + (n > 1 ? "s" : "");
     if (verrou) return `<div class="arret verrou" aria-disabled="true" title="Ce chapitre n'est pas encore ouvert">
       <span class="rail"><span class="point">${CADENAS}</span></span>
       <span class="nom">${esc(c.titre)}</span>
-      <span class="etat">${i === ici + 1 ? "Prochain arrêt" : "À venir"}</span>
+      <span class="etat">Bientôt</span>
     </div>`;
     return `<a class="arret ${etat}" href="frise.html?classe=${classe}&chap=${encodeURIComponent(c.id)}">
       <span class="rail">${etat === "ici" ? '<span class="badge">On est ici</span>' : ""}<span class="point"></span></span>
