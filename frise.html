@@ -274,7 +274,7 @@ function rendreTex(t){
           {left:"\\begin{align*}",right:"\\end{align*}",display:true},{left:"\\begin{align}",right:"\\end{align}",display:true},
           {left:"\\begin{equation*}",right:"\\end{equation*}",display:true},{left:"\\begin{equation}",right:"\\end{equation}",display:true},
           {left:"\\begin{cases}",right:"\\end{cases}",display:true}],
-        throwOnError:false, macros:{"\\R":"\\mathbb{R}","\\N":"\\mathbb{N}","\\Z":"\\mathbb{Z}","\\Q":"\\mathbb{Q}","\\C":"\\mathbb{C}"}
+        throwOnError:false, macros: Object.assign({}, MACROS_DEFAUT, MACROS_COURS)
       });
     }
   }
@@ -282,9 +282,36 @@ function rendreTex(t){
 $("#lect-fermer").onclick = () => { $("#lecteur").hidden = true; $("#lect-pdf").removeAttribute("src"); };
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !$("#lecteur").hidden) $("#lect-fermer").click(); });
 
+/* Macros : celles du préambule du cours, plus des définitions courantes si le préambule est dans un autre fichier. */
+const MACROS_DEFAUT = {
+  "\\R":"\\mathbb{R}", "\\N":"\\mathbb{N}", "\\Z":"\\mathbb{Z}", "\\Q":"\\mathbb{Q}", "\\C":"\\mathbb{C}", "\\D":"\\mathbb{D}",
+  "\\vect":"\\overrightarrow{#1}", "\\Vect":"\\overrightarrow{#1}", "\\vv":"\\overrightarrow{#1}", "\\V":"\\overrightarrow{#1}",
+  "\\norme":"\\left\\lVert #1\\right\\rVert", "\\abs":"\\left|#1\\right|", "\\ds":"\\displaystyle",
+  "\\e":"\\mathrm{e}", "\\ii":"\\mathrm{i}", "\\dd":"\\mathrm{d}", "\\Card":"\\operatorname{Card}",
+  "\\ps":"\\cdot", "\\pv":"\\wedge", "\\rond":"\\circ", "\\vide":"\\varnothing",
+  "\\lims":"\\displaystyle\\lim", "\\eps":"\\varepsilon"
+};
+let MACROS_COURS = {};
+function groupe(src, i){   // contenu entre accolades à partir de src[i] === "{"
+  let d = 0, j = i;
+  for (; j < src.length; j++){ if (src[j] === "\\"){ j++; continue; } if (src[j] === "{") d++; else if (src[j] === "}" && --d === 0) break; }
+  return src.slice(i + 1, j);
+}
+function macrosDuPreambule(src){
+  const out = {}; let m;
+  const re1 = /\\(?:re|provide)?newcommand\*?\s*\{?\s*(\\[A-Za-z]+)\s*\}?\s*(?:\[\d\])?\s*(?:\[[^\]]*\])?\s*\{/g;
+  while ((m = re1.exec(src))) out[m[1]] = groupe(src, m.index + m[0].length - 1);
+  const re2 = /\\def\s*(\\[A-Za-z]+)((?:#\d)*)\s*\{/g;
+  while ((m = re2.exec(src))) out[m[1]] = groupe(src, m.index + m[0].length - 1);
+  const re3 = /\\DeclareMathOperator\*?\s*\{\s*(\\[A-Za-z]+)\s*\}\s*\{([^}]*)\}/g;
+  while ((m = re3.exec(src))) out[m[1]] = "\\operatorname{" + m[2] + "}";
+  return out;
+}
+
 /* Conversion LaTeX -> HTML lisible (texte, listes, exercices ; les maths sont rendues par KaTeX). */
 function texVersHtml(src){
   let t = src.replace(/\r/g, "");
+  MACROS_COURS = macrosDuPreambule(t.replace(/(^|[^\\])%.*$/gm, "$1").split("\\begin{document}")[0]);
   const m = t.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
   if (m) t = m[1];
   t = t.replace(/(^|[^\\])%.*$/gm, "$1");
@@ -293,7 +320,8 @@ function texVersHtml(src){
   const maths = [];
   const garde = s => { maths.push(s); return "\u0002" + (maths.length - 1) + "\u0002"; };
   t = t.replace(/\\begin\{(align\*?|equation\*?|cases|array|gather\*?)\}[\s\S]*?\\end\{\1\}/g, garde);
-  t = t.replace(/\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$(?:\\.|[^$\\])+\$/g, garde);
+  // (?<!\\) : « \\[3pt] » est un saut de ligne, pas le début d'une formule \[ … \]
+  t = t.replace(/\$\$[\s\S]*?\$\$|(?<!\\)\\\[[\s\S]*?\\\]|(?<!\\)\\\([\s\S]*?\\\)|\$(?:\\.|[^$\\])+\$/g, garde);
   t = esc(t);
   t = t.replace(/\\(maketitle|newpage|clearpage|noindent|medskip|bigskip|smallskip|centering|hfill|vfill|par|tableofcontents|pagebreak|linebreak|hline|toprule|midrule|bottomrule)\b/g, "");
   t = t.replace(/\\(vspace|hspace|setlength|label|pagestyle|thispagestyle|setcounter|addtocounter)\*?\{[^}]*\}(\{[^}]*\})?/g, "");
