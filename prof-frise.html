@@ -111,7 +111,36 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--rule);b
 .vide{font-size:12px;color:var(--muted);text-align:center;font-style:italic}
 
 /* Panneaux du bas */
-.panneaux{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
+.panneaux{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;align-items:start}
+@media (max-width:820px){.panneaux{grid-template-columns:1fr}}
+/* Mini-ligne des chapitres de la classe */
+.mini-ligne{display:flex;align-items:flex-start;overflow-x:auto;padding:14px 6px 6px;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
+.mchap{flex:1 0 120px;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;min-width:120px}
+.mchap .mrail{position:relative;width:100%;height:22px;display:flex;justify-content:center;align-items:center}
+.mchap .mrail::before,.mchap .mrail::after{content:"";position:absolute;top:50%;height:6px;margin-top:-3px;background:var(--line)}
+.mchap .mrail::before{left:0;right:50%}.mchap .mrail::after{left:50%;right:0}
+.mchap:first-child .mrail::before,.mchap.dernier .mrail::after{display:none}
+.mpoint{position:relative;z-index:1;width:20px;height:20px;border-radius:50%;border:4px solid var(--line);background:var(--surface);padding:0;cursor:pointer;display:grid;place-items:center;color:var(--muted)}
+.mchap.termine .mpoint{background:var(--line)}
+.mchap.ferme .mpoint{border-color:var(--future);width:24px;height:24px}
+.mchap.masque .mpoint{border-style:dashed;border-color:var(--future)}
+.mchap.actif .mpoint{width:28px;height:28px;border-width:6px;box-shadow:0 0 0 5px var(--line-soft)}
+.mnom{border:0;background:none;padding:0 4px;font-family:var(--f-display);font-weight:700;font-size:13px;text-align:center;line-height:1.15;color:var(--fg);cursor:pointer;text-wrap:balance}
+.mchap.actif .mnom{color:var(--line)}
+.mchap.ferme .mnom,.mchap.masque .mnom{color:var(--muted)}
+.metat{font-size:11px;color:var(--muted)}
+.mfleches{display:flex;gap:4px}
+.mfleches .ico-btn{width:24px;height:24px}
+.mplus{flex:0 0 auto;align-self:center;margin:0 10px}
+/* État du chapitre */
+.etats button{font-size:13px}
+.bloc{border:1px solid var(--rule);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.bloc h3{margin:0;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.st-ligne2{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:26px;flex:1 1 100%}
+.st-ligne2 select{flex:1 1 180px;font-size:13px;padding:4px 6px}
+.st-ligne2 .btn{font-size:12px;padding:4px 9px}
+details.reglages summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted)}
+details.reglages[open]{display:flex;flex-direction:column;gap:10px}
 .panneau{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .panneau h2{font-family:var(--f-display);font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0}
 .champ{display:flex;flex-direction:column;gap:5px}
@@ -147,11 +176,6 @@ a.nom:hover{border-bottom-color:var(--line);color:var(--line)}
 .check{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:700}
 .export-box textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:12px;background:var(--surface-2);color:var(--fg);border:1px solid var(--rule);border-radius:8px;padding:8px;box-sizing:border-box}
 /* Mode projection : plus gros */
-body.proj{font-size:17px}
-body.proj .ligne{grid-auto-columns:minmax(220px,1fr)}
-body.proj .nom{font-size:19px}
-body.proj .ref{font-size:16px}
-body.proj .panneaux,body.proj #nouveau-form,body.proj #export-zone{display:none}
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -183,15 +207,12 @@ body.proj .panneaux,body.proj #nouveau-form,body.proj #export-zone{display:none}
     </div>
     <div class="chap-bar">
       <div class="classes"><div class="seg" role="group" aria-label="Classe" id="tabs-classes"></div></div>
-      <label for="sel-chap" class="note">Chapitre</label>
-      <select id="sel-chap"></select>
       <button class="btn primary" id="btn-import">Importer un cours</button>
-      <button class="btn ghost" id="btn-nouveau">Créer à la main</button>
       <a class="btn" id="voir-eleves" target="_blank" rel="noopener" title="Ouvrir la ligne telle que la voient les élèves">Voir la page élèves ↗</a>
       <span class="etat-save" id="etat-save" role="status">● En ligne</span>
-      <button class="btn" id="btn-proj" aria-pressed="false">Mode projection</button>
     </div>
   </header>
+  <nav class="mini-ligne" id="mini-ligne" aria-label="Chapitres de la classe" hidden></nav>
 
   <div id="import-zone" class="panneau" hidden>
     <h2>Importer un cours</h2>
@@ -199,6 +220,7 @@ body.proj .panneaux,body.proj #nouveau-form,body.proj #export-zone{display:none}
       <label class="btn primary" for="imp-fichier" style="cursor:pointer">Choisir le cours (.tex de préférence)</label>
       <input type="file" id="imp-fichier" accept=".tex,.pdf" hidden>
       <button class="btn ghost" type="button" id="imp-annuler1">Annuler</button>
+      <button class="btn ghost" type="button" id="imp-main">ou créer un chapitre sans fichier</button>
       <span class="note">Le fichier est envoyé en ligne : les élèves l'ouvriront depuis la frise avec « Voir le cours ».</span>
     </div>
     <div id="imp-etape2" hidden style="display:flex;flex-direction:column;gap:12px">
@@ -463,6 +485,45 @@ function notionNom(c, nid){ const n = c.notions.find(n => n.id === nid); return 
 
 function render(){ renderHaut(); renderPanneaux(); }
 
+function etatChap(x){ return x.publie === false ? "masque" : x.ferme ? "ferme" : x.termine ? "termine" : "ouvert"; }
+const ETATS = [["masque","Masqué","n'apparaît pas sur la ligne"],["ferme","🔒 Fermé","affiché, contenu inaccessible"],["ouvert","Ouvert","accessible aux élèves"],["termine","Terminé","ouvert, cours et QCM entiers"]];
+function renderMiniLigne(){
+  const nav = $("#mini-ligne");
+  if (!charge){ nav.hidden = true; return; }
+  const liste = Object.values(chapitres).filter(x => x.classe === classeActive).sort((a, b) => cleOrdre(a) - cleOrdre(b));
+  nav.hidden = false;
+  const libelle = {masque:"masqué", ferme:"fermé", termine:"terminé", ouvert:""};
+  nav.innerHTML = liste.map((x, i) => {
+    const e = etatChap(x), on = x.id === actif;
+    return `<div class="mchap ${e} ${on ? "actif" : ""} ${i === liste.length - 1 ? "dernier" : ""}">
+      <span class="mrail"><button class="mpoint" data-mchap="${x.id}" aria-label="Ouvrir ${esc(x.titre)}">${e === "ferme" ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' : ""}</button></span>
+      <button class="mnom" data-mchap="${x.id}">${esc(x.titre)}</button>
+      ${on && liste.length > 1 ? `<span class="mfleches"><button class="ico-btn" data-mdep="-1" ${i === 0 ? "disabled" : ""} aria-label="Plus tôt dans l'année" title="Plus tôt dans l'année">◂</button><button class="ico-btn" data-mdep="1" ${i === liste.length - 1 ? "disabled" : ""} aria-label="Plus tard dans l'année" title="Plus tard dans l'année">▸</button></span>` : `<span class="metat">${libelle[e]}</span>`}
+    </div>`;
+  }).join("") + `<button class="btn mplus" id="mplus" title="Importer le cours suivant">+ Chapitre</button>`;
+  nav.querySelectorAll("[data-mchap]").forEach(b => b.onclick = () => { actif = b.dataset.mchap; ls.set("frise.actif", actif); selExo = null; render(); });
+  nav.querySelectorAll("[data-mdep]").forEach(b => b.onclick = () => deplacerChapitre(chapitres[actif], +b.dataset.mdep));
+  $("#mplus").onclick = ouvrirImport;
+}
+function deplacerChapitre(c, sens){
+  if (!c) return;
+  const liste = Object.values(chapitres).filter(x => x.classe === c.classe).sort((a,b) => cleOrdre(a) - cleOrdre(b));
+  const i = liste.indexOf(c), j = i + sens;
+  if (i < 0 || j < 0 || j >= liste.length) return;
+  liste.forEach((x, k) => { x.ordre = k * 10; });
+  const voisin = liste[j]; [c.ordre, voisin.ordre] = [voisin.ordre, c.ordre];
+  liste.forEach(x => sauver(x, 0));
+  trier(); render(); toast("Ordre de la ligne modifié");
+}
+async function apercuCours(c){
+  const nom = c.pdf || c.lien; const w = window.open("", "_blank");
+  try {
+    const r = await fetch(API + "/api/admin/frise-file/" + encodeURIComponent(nom), {headers:{Authorization:"Bearer " + TOKEN}});
+    if (!r.ok) throw 0;
+    const u = URL.createObjectURL(await r.blob());
+    if (w) w.location = u; else location.href = u;
+  } catch(e){ if (w) w.close(); toast("Aperçu impossible"); }
+}
 function renderHaut(){
   $("#tabs-classes").innerHTML = CLASSES.map(([k,l]) => {
     const n = Object.values(chapitres).filter(c => c.classe === k).length;
@@ -471,9 +532,7 @@ function renderHaut(){
   $("#tabs-classes").querySelectorAll("[data-classe]").forEach(b => b.onclick = () => {
     classeActive = b.dataset.classe; ls.set("frise.classe", classeActive); selExo = null; trier(); render();
   });
-  const sel = $("#sel-chap");
-  sel.innerHTML = ordre.map(id => `<option value="${id}" ${id===actif?"selected":""}>${esc(chapitres[id].titre)}${chapitres[id].publie===false?" (masqué)":""}</option>`).join("");
-  sel.disabled = !ordre.length;
+  renderMiniLigne();
   const c = ch();
   const h1 = $("#titre-chap");
   if (h1.getAttribute("contenteditable") !== "true") h1.textContent = c ? c.titre : (charge ? "Aucun chapitre" : "Chargement…");
@@ -500,10 +559,7 @@ function renderHaut(){
   frise.innerHTML = `
     <div class="resume">
       <div class="ici">${icon("i-encours",18)}<span>On en est à : <b>${esc(c.notions[cur] ? c.notions[cur].titre : "—")}</b></span></div>
-      ${lienOk(c.lien) ? `<button class="lien-cours" id="apercu-cours" style="background:none;cursor:pointer" title="Aperçu du fichier">Cours : ${esc((c.pdf || c.lien).split("/").pop())} ↗</button><span class="stat">${({cache:"caché aux élèves", progressif:"élèves : jusqu'à la notion en cours", complet:"élèves : cours entier"})[c.cours || "cache"]}</span>` : `<span class="stat">Pas de cours associé</span>`}
-      <span class="stat"><strong>${cur+1}</strong> / ${c.notions.length} notions</span>
-      <span class="stat"><strong>${n("fait")}</strong> faits · <strong>${n("en_cours")}</strong> en cours · <strong>${n("a_faire")}</strong> à faire</span>
-      <span class="stat">${icon("i-maison",14).replace("<svg","<svg style='display:inline;vertical-align:-2px'")} <strong>${maisonAFaire}</strong> à la maison non terminés</span>
+      <span class="stat">Station <strong>${cur+1}</strong> / ${c.notions.length} · ${tous.length ? `<strong>${tous.length - n("fait")}</strong> exercice${tous.length - n("fait") > 1 ? "s" : ""} non terminé${tous.length - n("fait") > 1 ? "s" : ""}${maisonAFaire ? ` dont <strong>${maisonAFaire}</strong> à la maison` : ""}` : "aucun exercice"}</span>
       <div class="nav-ici">
         <button class="btn" id="reculer" ${cur<=0?"disabled":""}>◂ Reculer</button>
         <button class="btn primary" id="avancer" ${cur>=c.notions.length-1?"disabled":""}>Notion suivante ▸</button>
@@ -537,16 +593,6 @@ function renderHaut(){
         </div>`;
       }).join("")}
     </div></div>`;
-  const ap = document.getElementById("apercu-cours");
-  if (ap && c) ap.onclick = async () => {
-    const nom = c.pdf || c.lien; const w = window.open("", "_blank");
-    try {
-      const r = await fetch(API + "/api/admin/frise-file/" + encodeURIComponent(nom), {headers:{Authorization:"Bearer " + TOKEN}});
-      if (!r.ok) throw 0;
-      const b = await r.blob(); const u = URL.createObjectURL(b);
-      if (w) w.location = u; else location.href = u;
-    } catch(e){ if (w) w.close(); toast("Aperçu impossible"); }
-  };
   $("#avancer").onclick = () => { c.courant = Math.min(cur+1, c.notions.length-1); sauver(c, 0); render(); };
   $("#reculer").onclick = () => { c.courant = Math.max(cur-1, 0); sauver(c, 0); render(); };
   frise.querySelectorAll("[data-aller]").forEach(b => b.onclick = () => { c.courant = +b.dataset.aller; sauver(c, 0); render(); });
@@ -581,8 +627,23 @@ function renderPanneaux(){
   if (coursTex(c) && texCache[c.lien] === undefined) chargerTitres(c.lien);
   const optsNotions = sel => c.notions.map(n => `<option value="${n.id}" ${n.id===sel?"selected":""}>${esc(n.titre)}</option>`).join("");
   const nouv = window.__nouv || (window.__nouv = {lieu:"classe", diff:"vert"});
+  const sansAncre = H ? c.notions.filter(n => !Number.isInteger(n.ancre)).length : 0;
+  const sansQcm = H ? c.notions.filter(n => Number.isInteger(n.ancre) && !n.qcm).length : 0;
+  const ec = etatChap(c);
   p.innerHTML = `
-    <section class="panneau">
+    ${e ? `<section class="panneau">
+      <h2>Exercice sélectionné</h2>
+        <div class="champ"><label for="ex-ref">Référence</label><input type="text" id="ex-ref" value="${esc(e.ref)}"></div>
+        <div class="champ"><label for="ex-fichier">Fichier (PDF ou TeX)</label>
+          <div class="ligne-form"><input type="text" id="ex-fichier" value="${esc(e.fichier||"")}" placeholder="aucun">
+          ${fichierOk(e.fichier) ? `<a class="btn" href="${esc(urlFichier(e.fichier))}" target="_blank" rel="noopener">Ouvrir ↗</a>` : ""}</div></div>
+        <div class="champ"><label for="ex-notion">Notion</label><select id="ex-notion">${optsNotions(e.notion)}</select></div>
+        <div class="champ"><span class="lbl">Statut</span>${segHTML("estat", STATUTS.map(s=>[s[0],s[1],s[2]]), e.statut)}</div>
+        <div class="champ"><span class="lbl">Où ?</span>${segHTML("elieu", LIEUX, e.lieu)}</div>
+        <div class="champ"><span class="lbl">Difficulté</span>${segHTML("ediff", DIFFS, e.diff, "diff-btn")}</div>
+        <div class="ligne-form"><button class="btn primary" type="button" id="ex-fini">Terminé</button>
+        <span class="confirm" id="ex-suppr-zone"><button class="btn danger" id="ex-suppr">Supprimer l'exercice</button></span></div>
+    </section>` : `<section class="panneau">
       <h2>Ajouter des exercices</h2>
       <form id="form-exo" style="display:flex;flex-direction:column;gap:12px">
         <div class="champ"><label for="ne-ref">Référence</label>
@@ -594,61 +655,50 @@ function renderPanneaux(){
         <div class="champ"><span class="lbl">Où ?</span>${segHTML("nlieu", LIEUX, nouv.lieu)}</div>
         <div class="champ"><span class="lbl">Difficulté</span>${segHTML("ndiff", DIFFS, nouv.diff, "diff-btn")}</div>
         <div><button class="btn primary" type="submit">Ajouter</button></div>
-        <span class="note">Séparez plusieurs exercices par des points-virgules. Le fichier choisi est envoyé en ligne automatiquement.</span>
+        <span class="note">Séparez plusieurs exercices par des points-virgules. Pour modifier un exercice, cliquez dessus dans la frise ; son rond change le statut d'un clic.</span>
       </form>
-    </section>
+    </section>`}
     <section class="panneau">
-      <h2>Exercice sélectionné</h2>
-      ${e ? `
-        <div class="champ"><label for="ex-ref">Référence</label><input type="text" id="ex-ref" value="${esc(e.ref)}"></div>
-        <div class="champ"><label for="ex-fichier">Fichier (PDF ou TeX)</label>
-          <div class="ligne-form"><input type="text" id="ex-fichier" value="${esc(e.fichier||"")}" placeholder="exos/…pdf">
-          ${fichierOk(e.fichier) ? `<a class="btn" href="${esc(urlFichier(e.fichier))}" target="_blank" rel="noopener">Ouvrir ↗</a>` : ""}</div></div>
-        <div class="champ"><label for="ex-notion">Notion</label><select id="ex-notion">${optsNotions(e.notion)}</select></div>
-        <div class="champ"><span class="lbl">Statut</span>${segHTML("estat", STATUTS.map(s=>[s[0],s[1],s[2]]), e.statut)}</div>
-        <div class="champ"><span class="lbl">Où ?</span>${segHTML("elieu", LIEUX, e.lieu)}</div>
-        <div class="champ"><span class="lbl">Difficulté</span>${segHTML("ediff", DIFFS, e.diff, "diff-btn")}</div>
-        <div class="confirm" id="ex-suppr-zone"><button class="btn danger" id="ex-suppr">Supprimer l'exercice</button></div>
-      ` : `<span class="note">Cliquez sur un exercice dans la frise pour le modifier. Le rond à gauche d'un exercice change son statut d'un clic : à faire → en cours → fait.</span>`}
-    </section>
-    <section class="panneau">
-      <h2>Plan du chapitre</h2>
-      <div class="ligne-form">
-        <input type="text" id="ch-titre" value="${esc(c.titre)}" aria-label="Titre du chapitre">
-        <select id="ch-classe" aria-label="Classe">${CLASSES.map(([k,l]) => `<option value="${k}" ${k===c.classe?"selected":""}>${l}</option>`).join("")}</select>
+      <h2>Le chapitre</h2>
+      <div class="champ"><span class="lbl">Pour les élèves</span>
+        <div class="seg etats" role="group" aria-label="État du chapitre pour les élèves">${ETATS.map(([v,l,t]) => `<button type="button" data-etat="${v}" aria-pressed="${ec===v}" title="${t}">${l}</button>`).join("")}</div>
+        <span class="note">${(ETATS.find(x => x[0] === ec) || [])[2] || ""}</span></div>
+
+      <div class="bloc"><h3>Cours</h3>
+        ${lienOk(c.lien) ? `<div class="ligne-form"><button class="btn" type="button" id="apercu-cours">${esc(c.lien)} ↗</button>${c.pdf && c.pdf !== c.lien ? `<span class="note">PDF élèves : <b>${esc(c.pdf)}</b></span>` : ""}</div>
+        <div class="ligne-form"><label for="ch-cours" class="note" style="font-weight:700">Les élèves voient</label>
+          <select id="ch-cours">${'<option value="cache">rien (cours caché)</option><option value="progressif">jusqu\'à la notion en cours</option><option value="complet">le cours entier</option>'.replace(`value="${c.cours || "cache"}"`, `value="${c.cours || "cache"}" selected`)}</select>
+          <label class="btn" for="ch-pdf" style="cursor:pointer">${c.pdf ? "Remplacer le PDF" : "Ajouter le PDF"}</label><input type="file" id="ch-pdf" accept=".pdf" hidden></div>`
+        : `<span class="note">Aucun cours : utilisez « Importer un cours » en haut.</span>`}
       </div>
-      <span class="note">Cours : ${lienOk(c.lien) ? `<b>${esc(c.lien)}</b>` : "aucun (bouton « Importer un cours » en haut)"}${c.pdf ? ` · PDF élèves : <b>${esc(c.pdf)}</b>` : ""}</span>
-      ${lienOk(c.lien) ? `<div class="ligne-form"><label for="ch-cours" class="note" style="font-weight:700">Cours pour les élèves</label>
-        <select id="ch-cours">${'<option value="cache">Caché aux élèves</option><option value="progressif">Jusqu\'à la notion en cours</option><option value="complet">En entier</option>'.replace(`value="${c.cours || "cache"}"`, `value="${c.cours || "cache"}" selected`)}</select></div>` : ""}
-      <div class="ligne-form"><label class="btn" for="ch-pdf" style="cursor:pointer">${c.pdf ? "Remplacer le PDF du cours" : "Ajouter le PDF du cours"}</label><input type="file" id="ch-pdf" accept=".pdf" hidden></div>
-      <label class="check"><input type="checkbox" id="ch-publie" ${c.publie!==false?"checked":""}> Visible par les élèves sur le site</label>
-      <label class="check"><input type="checkbox" id="ch-ferme" ${c.ferme ? "checked" : ""}> 🔒 Chapitre fermé : affiché sur la ligne, contenu inaccessible aux élèves</label>
-      <div class="ligne-form"><span class="note" style="font-weight:700">Place sur la ligne de la classe</span>
-        <button class="btn" type="button" id="ch-tot">◂ Plus tôt dans l'année</button>
-        <button class="btn" type="button" id="ch-tard">Plus tard ▸</button></div>
-      <label class="check"><input type="checkbox" id="ch-termine" ${c.termine?"checked":""}> Chapitre terminé (gardé dans l'historique des élèves)</label>
-      <span class="lbl note" style="font-weight:700">Stations de la ligne${coursTex(c) ? " et partie du cours où chacune commence" : ""}</span>
-      ${coursTex(c) && H ? `<div class="ligne-form"><button class="btn" type="button" id="anc-auto">Associer automatiquement les parties</button>
-        <button class="btn" type="button" id="qcm-tous">Générer tous les QCM manquants</button><span class="note">Sert au mode « jusqu'à la notion en cours ».</span></div>` : coursTex(c) ? `<span class="note">${H === false ? "Titres du cours illisibles." : "Lecture des titres du cours…"}</span>` : ""}
-      <ul class="notions">
+
+      <div class="bloc"><h3>Stations${H ? " · partie du cours · QCM" : ""}</h3>
+        ${coursTex(c) && !H ? `<span class="note">${H === false ? "Titres du cours illisibles." : "Lecture des titres du cours…"}</span>` : ""}
+        ${sansAncre || sansQcm ? `<div class="ligne-form">${sansAncre ? `<button class="btn" type="button" id="anc-auto">Associer automatiquement les parties (${sansAncre})</button>` : ""}${sansQcm ? `<button class="btn" type="button" id="qcm-tous">Générer les QCM manquants (${sansQcm})</button>` : ""}</div>` : ""}
+        <ul class="notions">
         ${c.notions.map((n,i) => `<li><span class="num">${i+1}</span>
           <input type="text" data-nnom="${n.id}" value="${esc(n.titre)}" aria-label="Notion ${i+1}">
           <button class="ico-btn" data-nup="${i}" ${i===0?"disabled":""} aria-label="Monter">${icon("i-haut",14)}</button>
           <button class="ico-btn" data-ndown="${i}" ${i===c.notions.length-1?"disabled":""} aria-label="Descendre">${icon("i-bas",14)}</button>
           <button class="ico-btn" data-ndel="${n.id}" ${c.notions.length<2?"disabled":""} aria-label="Supprimer la notion">${icon("i-x",14)}</button>
-          ${H ? `<select class="url" data-nanc="${n.id}" aria-label="Partie du cours où commence la notion ${i+1}">${optionsAncres(H, Number.isInteger(n.ancre) ? n.ancre : null)}</select>
-          <span class="url" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:0;border:0">
+          ${H ? `<span class="st-ligne2"><select data-nanc="${n.id}" aria-label="Partie du cours où commence la notion ${i+1}">${optionsAncres(H, Number.isInteger(n.ancre) ? n.ancre : null)}</select>
             <button class="btn" type="button" data-nqcm="${n.id}" ${Number.isInteger(n.ancre) ? "" : "disabled title=\"Choisissez d'abord la partie du cours\""}>${n.qcm ? "Refaire le QCM" : "Générer un QCM"}</button>
-            ${n.qcm ? (n.qcmPublie ? `<a class="note" href="entrainement.html?q=${encodeURIComponent(n.qcm)}" target="_blank" rel="noopener">QCM ouvert aux élèves ✓ — voir ↗</a>` : `<span class="note">QCM prêt, s'ouvrira quand la ligne atteindra cette station</span>`) : `<span class="note">5 questions sur cette partie</span>`}
-          </span>` : ""}</li>`).join("")}
-      </ul>
-      <form class="ligne-form" id="form-notion"><input type="text" id="nn-titre" placeholder="Nouvelle notion"><button class="btn" type="submit">Ajouter</button></form>
-      <span class="note" id="ndel-msg"></span>
-      <div class="confirm" id="ch-suppr-zone"><button class="btn ghost" id="ch-suppr">Supprimer ce chapitre</button></div>
-      ${local ? '<span class="note">Données enregistrées dans ce navigateur uniquement.</span>' : ""}
+            ${n.qcm ? (n.qcmPublie ? `<a class="note" href="entrainement.html?q=${encodeURIComponent(n.qcm)}" target="_blank" rel="noopener">QCM ouvert ✓ ↗</a>` : `<span class="note">QCM prêt</span>`) : ""}</span>` : ""}</li>`).join("")}
+        </ul>
+        <form class="ligne-form" id="form-notion"><input type="text" id="nn-titre" placeholder="Nouvelle station"><button class="btn" type="submit">Ajouter</button></form>
+        <span class="note" id="ndel-msg"></span>
+      </div>
+
+      <details class="reglages"><summary>Réglages du chapitre</summary>
+        <div class="ligne-form"><label for="ch-classe" class="note" style="font-weight:700">Classe</label>
+          <select id="ch-classe" aria-label="Classe">${CLASSES.map(([k,l]) => `<option value="${k}" ${k===c.classe?"selected":""}>${l}</option>`).join("")}</select></div>
+        <span class="note">Le titre se modifie en cliquant dessus, en haut de la page. L'ordre des chapitres se règle avec les flèches de la ligne du haut.</span>
+        <div class="confirm" id="ch-suppr-zone"><button class="btn danger" id="ch-suppr">Supprimer ce chapitre</button></div>
+      </details>
     </section>`;
 
   // Ajout d'exercices
+  if (!e){
   p.querySelectorAll("[data-nlieu]").forEach(b => b.onclick = () => { nouv.lieu = b.dataset.nlieu; marquer(p,"nlieu",nouv.lieu); });
   p.querySelectorAll("[data-ndiff]").forEach(b => b.onclick = () => { nouv.diff = b.dataset.ndiff; marquer(p,"ndiff",nouv.diff); });
   $("#form-exo").onsubmit = ev => {
@@ -671,6 +721,7 @@ function renderPanneaux(){
     try { const nom = await envoyerFichier(f); $("#ne-fichier").value = nom; if (!$("#ne-ref").value.trim()) $("#ne-ref").value = f.name.replace(/\.(pdf|tex)$/i, ""); toast("Fichier envoyé"); }
     catch(e){ if (e.code !== "auth") toast("Envoi impossible : " + (e.message || "réseau")); }
   };
+  }
 
   // Édition de l'exercice sélectionné
   if (e){
@@ -680,46 +731,30 @@ function renderPanneaux(){
     p.querySelectorAll("[data-estat]").forEach(b => b.onclick = () => { e.statut = b.dataset.estat; sauver(c,0); render(); });
     p.querySelectorAll("[data-elieu]").forEach(b => b.onclick = () => { e.lieu = b.dataset.elieu; sauver(c,0); render(); });
     p.querySelectorAll("[data-ediff]").forEach(b => b.onclick = () => { e.diff = b.dataset.ediff; sauver(c,0); render(); });
+    $("#ex-fini").onclick = () => { selExo = null; render(); };
     $("#ex-suppr").onclick = () => confirmer("#ex-suppr-zone", "Supprimer « " + e.ref + " » ?", () => {
       c.exos = c.exos.filter(x => x.id !== e.id); selExo = null; sauver(c,0); render();
     });
   }
 
   // Plan
-  $("#ch-titre").oninput = ev => { c.titre = ev.target.value; sauver(c); renderHaut(); };
   $("#ch-classe").onchange = ev => { c.classe = ev.target.value; classeActive = c.classe; ls.set("frise.classe", classeActive); sauver(c,0); trier(); render(); };
-  $("#ch-pdf").onchange = async ev => {
+  const apc = $("#apercu-cours"); if (apc) apc.onclick = () => apercuCours(c);
+  p.querySelectorAll("[data-etat]").forEach(b => b.onclick = () => {
+    const v = b.dataset.etat;
+    c.publie = v !== "masque";
+    if (v === "ferme") c.ferme = true; else delete c.ferme;
+    c.termine = v === "termine";
+    sauver(c, 0); render();
+    toast("« " + c.titre + " » : " + b.textContent.replace("🔒 ", "").toLowerCase());
+  });
+  const chpdf = $("#ch-pdf"); if (chpdf) chpdf.onchange = async ev => {
     const f = ev.target.files[0]; ev.target.value = ""; if (!f) return;
     toast("Envoi du PDF…");
     try { c.pdf = await envoyerFichier(f); if (!c.lien) c.lien = c.pdf; sauver(c,0); render(); toast("PDF envoyé"); }
     catch(e){ if (e.code !== "auth") toast("Envoi impossible : " + (e.message || "réseau")); }
   };
-  $("#ch-publie").onchange = ev => { c.publie = ev.target.checked; sauver(c,0); renderHaut(); };
   const selCours = $("#ch-cours"); if (selCours) selCours.onchange = ev => { c.cours = ev.target.value; sauver(c,0); renderHaut(); toast(ev.target.selectedOptions[0].textContent); };
-  $("#ch-termine").onchange = ev => { c.termine = ev.target.checked; sauver(c,0); renderHaut(); };
-  const placerIci = on => {
-    Object.values(chapitres).filter(x => x.classe === c.classe).forEach(x => {
-      const v = on && x === c;
-      if (!!x.ici !== v){ if (v) x.ici = true; else delete x.ici; }
-      sauver(x, 0);   // chaque enregistrement ouvre/ferme aussi les QCM concernés
-    });
-    render(); toast(on ? "📍 « On est ici » épinglé sur « " + c.titre + " »" : "Épingle retirée : « On est ici » revient au dernier chapitre en cours");
-  };
-  $("#ch-ferme").onchange = ev => {
-    if (ev.target.checked) c.ferme = true; else delete c.ferme;
-    sauver(c, 0); renderHaut(); toast(c.ferme ? "« " + c.titre + " » est fermé aux élèves" : "« " + c.titre + " » est ouvert aux élèves");
-  };
-  const deplacerChap = sens => {
-    const liste = Object.values(chapitres).filter(x => x.classe === c.classe).sort((a,b) => cleOrdre(a) - cleOrdre(b));
-    const i = liste.indexOf(c), j = i + sens;
-    if (i < 0 || j < 0 || j >= liste.length){ toast(sens < 0 ? "Déjà le premier chapitre de la ligne" : "Déjà le dernier chapitre de la ligne"); return; }
-    liste.forEach((x, k) => { x.ordre = k * 10; });
-    const voisin = liste[j]; [c.ordre, voisin.ordre] = [voisin.ordre, c.ordre];
-    liste.forEach(x => sauver(x, 0));
-    trier(); render(); toast("Ordre de la ligne modifié");
-  };
-  $("#ch-tot").onclick = () => deplacerChap(-1);
-  $("#ch-tard").onclick = () => deplacerChap(1);
 
   const qt = $("#qcm-tous"); if (qt) qt.onclick = () => genererTousQcm(c, qt);
   p.querySelectorAll("[data-nqcm]").forEach(b => b.onclick = () => {
@@ -781,7 +816,6 @@ function ouvrirNouveau(){
   $("#nouveau-form").hidden = false; $("#nc-titre").focus();
 }
 
-$("#btn-nouveau").onclick = ouvrirNouveau;
 $("#nc-annuler").onclick = () => { $("#nouveau-form").hidden = true; };
 $("#form-chap").onsubmit = ev => {
   ev.preventDefault();
@@ -793,14 +827,7 @@ $("#form-chap").onsubmit = ev => {
   selExo = null; sauver(c,0); trier(); render();
   toast("Chapitre créé — renommez la première notion dans « Plan du chapitre »");
 };
-$("#sel-chap").onchange = ev => { actif = ev.target.value; ls.set("frise.actif", actif); selExo = null; render(); };
-$("#btn-proj").onclick = ev => {
-  const on = document.body.classList.toggle("proj");
-  ev.currentTarget.setAttribute("aria-pressed", on);
-  ev.currentTarget.textContent = on ? "Quitter la projection" : "Mode projection";
-  if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
-  if (!on && document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-};
+$("#imp-main").onclick = () => { fermerImport(); ouvrirNouveau(); };
 
 /* ---------- Importer un cours ---------- */
 let imp = null;  // {fichier, notions:[titre]}
