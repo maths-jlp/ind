@@ -1,399 +1,150 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>jlp Maths Tools</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>jlp Maths — plan du réseau</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@500;600;700;800;900&display=swap">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Plan du réseau : un fond de plan clair, trois lignes de classe qui se croisent à la station « jlp Maths ». */
+:root{
+  --fond:#F7F6F2; --encre:#0E2A47; --gris:#DDDCD6; --gris-texte:#A3A29B; --seine:#CFE4F2;
+  --l4:#BB4D98; --l1:#FFCD00; --lt:#E2231A; --vert:#16906F;
+  --f:"Overpass","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--fond);color:var(--encre);font-family:var(--f)}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:3px solid var(--encre);outline-offset:3px;border-radius:8px}
 
-  :root {
-    --bg: #fafaf7;
-    --panel: #ffffff;
-    --ink: #1a1a1a;
-    --muted: #6b6558;
-    --line: #e5e0d4;
-    --accent: #8b2018;
-  }
+.plan{position:relative;height:100%;min-height:560px;overflow:hidden}
+.plan svg.carte{position:absolute;inset:0;width:100%;height:100%}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* Lignes cliquables */
+.ligne-clic{cursor:pointer}
+.ligne-clic .trace{transition:stroke-width .15s}
+.ligne-clic:hover .trace,.ligne-clic:focus .trace{stroke-width:22}
+.ligne-clic:focus{outline:none}
 
-  body {
-    background: var(--bg);
-    color: var(--ink);
-    font-family: 'EB Garamond', Georgia, serif;
-    min-height: 100vh;
-    line-height: 1.4;
-  }
+/* Cartouche titre */
+.cartouche{position:absolute;top:calc(20px + env(safe-area-inset-top,0px));left:max(20px,env(safe-area-inset-left,0px));background:var(--encre);color:#fff;border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 20px rgba(14,42,71,.18)}
+.cartouche .m{width:46px;height:46px;border-radius:50%;border:4px solid #fff;display:grid;place-items:center;font-weight:900;font-size:22px}
+.cartouche b{display:block;font-size:24px;font-weight:800;line-height:1}
+.cartouche span{font-size:13px;font-weight:600;opacity:.75}
 
-  .container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 20px 24px;
-  }
+/* Légende = navigation principale */
+.legende{position:absolute;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));background:#fff;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 24px rgba(14,42,71,.14);min-width:300px}
+.legende h2{margin:0 4px 2px;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#5A6B7E}
+.choix{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px}
+.choix:hover{background:#F1F3F6}
+.pastille{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:20px;flex:none}
+.choix b{display:block;font-size:17px;font-weight:800}
+.choix small{display:block;font-size:13px;color:#5A6B7E;font-weight:600}
 
-  header {
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 10px;
-    margin-bottom: 18px;
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
+.actions{position:absolute;left:max(20px,env(safe-area-inset-left,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;flex-wrap:wrap}
+.bouton{display:flex;align-items:center;gap:10px;padding:13px 20px;border-radius:12px;font-weight:800;font-size:18px;box-shadow:0 6px 20px rgba(14,42,71,.12)}
+.bouton.qcm{background:var(--vert);color:#fff}
+.bouton.entr{background:#fff;color:var(--encre);border:2px solid var(--vert)}
+.prof{position:absolute;right:max(20px,env(safe-area-inset-right,0px));top:calc(26px + env(safe-area-inset-top,0px));font-size:13px;font-weight:700;color:#5A6B7E;background:rgba(255,255,255,.85);padding:7px 12px;border-radius:8px}
+.prof:hover{color:var(--encre)}
 
-  h1 {
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-  h1 .accent { color: var(--accent); }
-
-  .tagline {
-    font-size: 12px;
-    color: var(--muted);
-    font-style: italic;
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  .section { margin-bottom: 18px; }
-  h2 {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-    margin-bottom: 8px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .grid-5 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 10px;
-  }
-
-  .grid-classes {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
-  }
-
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 5px;
-    padding: 12px 14px;
-    text-decoration: none;
-    color: var(--ink);
-    transition: all 0.15s ease;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    cursor: pointer;
-    min-height: 82px;
-  }
-  .card:hover {
-    border-color: var(--accent);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-  }
-  .card-icon { font-size: 18px; margin-bottom: 2px; }
-  .card-title {
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    line-height: 1.2;
-  }
-  .card-desc {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1.3;
-  }
-  .card-tag {
-    font-size: 9px;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-    margin-top: auto;
-    padding-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .tabs {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 4px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--line);
-  }
-  .tab {
-    padding: 6px 18px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-family: 'EB Garamond', serif;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--muted);
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    transition: all 0.15s;
-  }
-  .tab:hover { color: var(--ink); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  .classes-row {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-  }
-  .classes-main { flex: 1; min-width: 0; }
-  .qcm-cards {
-    display: grid;
-    grid-template-columns: repeat(2, 200px);
-    gap: 10px;
-  }
-  .card.qcm-main { border-color: var(--accent); }
-  @media (max-width: 700px) {
-    .classes-row { flex-direction: column; align-items: stretch; }
-    .qcm-cards { grid-template-columns: repeat(2, 1fr); }
-  }
-  .niveau-content { display: none; }
-  .niveau-content.active { display: block; }
-
-  footer {
-    margin-top: 20px;
-    padding-top: 10px;
-    border-top: 1px solid var(--line);
-    text-align: center;
-    font-size: 11px;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  @media (max-width: 900px) {
-    .grid-5 { grid-template-columns: repeat(3, 1fr); }
-  }
-  @media (max-width: 600px) {
-    h1 { font-size: 20px; }
-    .container { padding: 14px 12px; }
-    .grid-5 { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    .card { padding: 10px; min-height: 72px; }
-    .card-title { font-size: 13px; }
-    .tab { padding: 6px 12px; font-size: 14px; }
-  }
+/* Téléphone : le plan en haut, la légende en dessous */
+@media (max-width:760px){
+  html,body{height:auto}
+  .plan{height:auto;min-height:0;display:flex;flex-direction:column;gap:14px;padding:16px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+  .plan svg.carte{position:relative;height:auto;aspect-ratio:16/10;order:1}
+  .cartouche,.legende,.actions,.prof{position:static;box-shadow:none}
+  .cartouche{order:0}
+  .legende{order:2;min-width:0}
+  .actions{order:3}
+  .prof{order:4;align-self:flex-start}
+}
 </style>
 </head>
 <body>
+<main class="plan">
+  <svg class="carte" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plan du réseau : lignes 4, 1 et T">
+    <!-- Seine -->
+    <path d="M-20 655 C 240 600 420 720 700 672 S 1180 585 1620 650" fill="none" stroke="var(--seine)" stroke-width="64" stroke-linecap="round"/>
+    <!-- Réseau d'arrière-plan -->
+    <g fill="none" stroke="var(--gris)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M40 260 H330 L470 120 H760"/>
+      <path d="M980 40 V220 L1180 420 H1580"/>
+      <path d="M1260 880 V700 L1420 540 V300"/>
+      <path d="M360 880 L520 720 H700 L760 660"/>
+      <path d="M1010 880 L1120 770 H1300"/>
+      <path d="M40 590 H220 L330 480 V300"/>
+    </g>
+    <g fill="#fff" stroke="var(--gris)" stroke-width="4">
+      <circle cx="330" cy="260" r="7"/><circle cx="620" cy="120" r="7"/><circle cx="980" cy="56" r="7"/>
+      <circle cx="1300" cy="420" r="7"/><circle cx="1420" cy="380" r="7"/><circle cx="600" cy="720" r="7"/>
+      <circle cx="1200" cy="770" r="7"/><circle cx="220" cy="590" r="7"/><circle cx="1260" cy="760" r="7"/>
+    </g>
+    <g fill="var(--gris-texte)" font-family="Overpass, sans-serif" font-size="19" font-weight="700">
+      <text x="300" y="242">Thalès</text><text x="590" y="102">Euclide</text><text x="996" y="62">Fermat</text>
+      <text x="1270" y="404">Descartes</text><text x="1436" y="386">Gauss</text><text x="500" y="705">Hypatie</text>
+      <text x="1180" y="802">Euler</text><text x="170" y="620">Pascal</text><text x="1276" y="766">Noether</text>
+    </g>
 
-<div class="container">
+    <!-- Ligne 1 · 1ère spé -->
+    <a class="ligne-clic" href="ligne.html?classe=1ere" aria-label="Ligne 1 : 1ère spécialité">
+      <path class="trace" d="M110 450 H1490" fill="none" stroke="var(--l1)" stroke-width="16" stroke-linecap="round"/>
+      <path d="M110 450 H1490" fill="none" stroke="transparent" stroke-width="44"/>
+      <g fill="#fff" stroke="var(--encre)" stroke-width="4"><circle cx="330" cy="450" r="9"/><circle cx="560" cy="450" r="9"/><circle cx="1060" cy="450" r="9"/><circle cx="1290" cy="450" r="9"/></g>
+      <circle cx="80" cy="450" r="30" fill="var(--l1)"/><text x="80" y="460" text-anchor="middle" font-family="Overpass, sans-serif" font-size="30" font-weight="900" fill="var(--encre)">1</text>
+      <circle cx="1520" cy="450" r="30" fill="var(--l1)"/><text x="1520" y="460" text-anchor="middle" font-family="Overpass, sans-serif" font-size="30" font-weight="900" fill="var(--encre)">1</text>
+    </a>
+    <!-- Ligne 4 · 4ème -->
+    <a class="ligne-clic" href="ligne.html?classe=4eme" aria-label="Ligne 4 : 4ème">
+      <path class="trace" d="M180 140 H500 L760 400 V500 L1020 760 H1160" fill="none" stroke="var(--l4)" stroke-width="16" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M180 140 H500 L760 400 V500 L1020 760 H1160" fill="none" stroke="transparent" stroke-width="44" stroke-linejoin="round"/>
+      <g fill="#fff" stroke="var(--encre)" stroke-width="4"><circle cx="360" cy="140" r="9"/><circle cx="630" cy="270" r="9"/><circle cx="890" cy="630" r="9"/><circle cx="1100" cy="760" r="9"/></g>
+      <circle cx="150" cy="140" r="30" fill="var(--l4)"/><text x="150" y="150" text-anchor="middle" font-family="Overpass, sans-serif" font-size="30" font-weight="900" fill="#fff">4</text>
+      <circle cx="1190" cy="760" r="30" fill="var(--l4)"/><text x="1190" y="770" text-anchor="middle" font-family="Overpass, sans-serif" font-size="30" font-weight="900" fill="#fff">4</text>
+    </a>
+    <!-- Ligne T · Terminale spé -->
+    <a class="ligne-clic" href="ligne.html?classe=terminale" aria-label="Ligne T : Terminale spécialité">
+      <path class="trace" d="M200 800 H560 L820 540 V360 L1080 100 H1400" fill="none" stroke="var(--lt)" stroke-width="16" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M200 800 H560 L820 540 V360 L1080 100 H1400" fill="none" stroke="transparent" stroke-width="44" stroke-linejoin="round"/>
+      <g fill="#fff" stroke="var(--encre)" stroke-width="4"><circle cx="400" cy="800" r="9"/><circle cx="690" cy="670" r="9"/><circle cx="950" cy="230" r="9"/><circle cx="1250" cy="100" r="9"/></g>
+      <circle cx="170" cy="800" r="30" fill="var(--lt)"/><text x="170" y="810" text-anchor="middle" font-family="Overpass, sans-serif" font-size="30" font-weight="900" fill="#fff">T</text>
+      <circle cx="1430" cy="100" r="30" fill="var(--lt)"/><text x="1430" y="110" text-anchor="middle" font-family="Overpass, sans-serif" font-size="30" font-weight="900" fill="#fff">T</text>
+    </a>
 
-  <header>
-    <h1>jlp <span class="accent">Maths</span> Tools</h1>
-    <div class="tagline">tableau de bord pédagogique</div>
-  </header>
+    <!-- Station de correspondance -->
+    <rect x="732" y="418" width="116" height="64" rx="32" fill="#fff" stroke="var(--encre)" stroke-width="6"/>
+    <text x="725" y="530" text-anchor="end" font-family="Overpass, sans-serif" font-size="26" font-weight="900" fill="var(--encre)">jlp Maths</text>
+  </svg>
 
-  <!-- ============= OUTILS TRANSVERSES ============= -->
-  <section class="section">
-    <h2>Outils transverses</h2>
-    <div class="grid-5">
-      <a href="visualiseur-3d.html" class="card">
-        <div class="card-icon">📐</div>
-        <div class="card-title">Visualiseur 3D</div>
-        <div class="card-desc">points · droites · plans</div>
-        <div class="card-tag">v1</div>
-      </a>
-      <a href="compte-a-rebours.html" class="card">
-        <div class="card-icon">⏱</div>
-        <div class="card-title">Compte à rebours</div>
-        <div class="card-desc">timer projetable</div>
-        <div class="card-tag">v1</div>
-      </a>
-      <a href="tirage-aleatoire.html" class="card">
-        <div class="card-icon">🎲</div>
-        <div class="card-title">Tirage aléatoire</div>
-        <div class="card-desc">nombre N → M</div>
-        <div class="card-tag">v1</div>
-      </a>
-      <a href="fond-projection.html" class="card">
-        <div class="card-icon">🖼</div>
-        <div class="card-title">Fond projection</div>
-        <div class="card-desc">blanc · repère · lignes</div>
-        <div class="card-tag">v1</div>
-      </a>
-      <a href="compte-est-bon.html" class="card">
-        <div class="card-icon">🔢</div>
-        <div class="card-title">Le compte est bon</div>
-        <div class="card-desc">6 plaques · cible · timer</div>
-        <div class="card-tag">v1</div>
-      </a>
-      <a href="console-python.html" class="card">
-        <div class="card-icon">🐍</div>
-        <div class="card-title">Console Python</div>
-        <div class="card-desc">éditeur · exécution · courbes</div>
-        <div class="card-tag">v1</div>
-      </a>
-    </div>
-  </section>
+  <div class="cartouche">
+    <span class="m" aria-hidden="true">M</span>
+    <div><b>jlp Maths</b><span>Plan du réseau · choisis ta ligne</span></div>
+  </div>
 
-  <!-- ============= MES CLASSES ============= -->
-  <section class="section">
-    <h2>Mes classes</h2>
-    <div class="tabs">
-      <button class="tab active" onclick="switchNiveau(event, '4e')">4ème</button>
-      <button class="tab" onclick="switchNiveau(event, '1ere')">1ère spé</button>
-      <button class="tab" onclick="switchNiveau(event, 'tle')">Terminale spé</button>
-    </div>
+  <a class="prof" href="prof.html">Espace prof</a>
 
-    <div class="classes-row">
-    <div class="classes-main">
-    <div class="niveau-content active" id="niveau-4e">
-      <div class="grid-classes">
-        <a href="fractions-equivalentes.html" class="card">
-          <div class="card-icon">🍕</div>
-          <div class="card-title">Fractions équivalentes</div>
-          <div class="card-desc">disque · barre · carré</div>
-          <div class="card-tag">v1</div>
-        </a>
-        <a href="tirage-eleve.html?classe=4eme" class="card">
-          <div class="card-icon">🎓</div>
-          <div class="card-title">Tirage élève</div>
-          <div class="card-desc">4ème — prénoms</div>
-          <div class="card-tag">v1</div>
-        </a>
-        <a href="frise.html?classe=4eme" class="card">
-          <div class="card-icon">🚇</div>
-          <div class="card-title">Ma ligne 4ème</div>
-          <div class="card-desc">progression du chapitre</div>
-          <div class="card-tag">frise</div>
-        </a>
-      </div>
-    </div>
+  <nav class="legende" aria-label="Choisir sa ligne">
+    <h2>Ma ligne</h2>
+    <a class="choix" href="ligne.html?classe=4eme"><span class="pastille" style="background:var(--l4);color:#fff">4</span><span><b>4ème</b><small data-encours="4eme">Ligne 4</small></span></a>
+    <a class="choix" href="ligne.html?classe=1ere"><span class="pastille" style="background:var(--l1);color:var(--encre)">1</span><span><b>1ère spé</b><small data-encours="1ere">Ligne 1</small></span></a>
+    <a class="choix" href="ligne.html?classe=terminale"><span class="pastille" style="background:var(--lt);color:#fff">T</span><span><b>Terminale spé</b><small data-encours="terminale">Ligne T</small></span></a>
+  </nav>
 
-    <div class="niveau-content" id="niveau-1ere">
-      <div class="grid-classes">
-        <a href="tirage-eleve.html?classe=1ere" class="card">
-          <div class="card-icon">🎓</div>
-          <div class="card-title">Tirage élève</div>
-          <div class="card-desc">1ère — prénoms</div>
-          <div class="card-tag">v1</div>
-        </a>
-        <a href="frise.html?classe=1ere" class="card">
-          <div class="card-icon">🚇</div>
-          <div class="card-title">Ma ligne 1ère</div>
-          <div class="card-desc">progression du chapitre</div>
-          <div class="card-tag">frise</div>
-        </a>
-        <a href="https://manuel.sesamath.net/numerique/?ouvrage=ms1spe_2019" target="_blank" rel="noopener" class="card">
-          <div class="card-icon">📚</div>
-          <div class="card-title">Manuel Sésamath</div>
-          <div class="card-desc">1ère Spé 2019</div>
-          <div class="card-tag">sesamath.net</div>
-        </a>
-      </div>
-    </div>
-
-    <div class="niveau-content" id="niveau-tle">
-      <div class="grid-classes">
-        <a href="tirage-eleve.html?classe=terminale" class="card">
-          <div class="card-icon">🎓</div>
-          <div class="card-title">Tirage élève</div>
-          <div class="card-desc">Terminale — prénoms</div>
-          <div class="card-tag">v1</div>
-        </a>
-        <a href="frise.html?classe=terminale" class="card">
-          <div class="card-icon">🚇</div>
-          <div class="card-title">Ma ligne Terminale</div>
-          <div class="card-desc">progression du chapitre</div>
-          <div class="card-tag">frise</div>
-        </a>
-        <a href="https://manuel.sesamath.net/numerique/?ouvrage=mstsspe_2020" target="_blank" rel="noopener" class="card">
-          <div class="card-icon">📚</div>
-          <div class="card-title">Manuel Sésamath</div>
-          <div class="card-desc">Tle Spé 2020</div>
-          <div class="card-tag">sesamath.net</div>
-        </a>
-      </div>
-    </div>
-    </div>
-    <div class="qcm-cards">
-      <a href="eval.html" class="card qcm-main">
-        <div class="card-icon">✅</div>
-        <div class="card-title">QCM</div>
-        <div class="card-desc">évaluation notée</div>
-        <div class="card-tag">v1</div>
-      </a>
-      <a href="entrainement.html" class="card">
-        <div class="card-icon">🔁</div>
-        <div class="card-title">Entraînement</div>
-        <div class="card-desc">rejouer · sans note</div>
-        <div class="card-tag">v1</div>
-      </a>
-    </div>
-    </div>
-  </section>
-
-  <!-- ============= LIENS EXTERNES ============= -->
-  <section class="section">
-    <h2>Liens externes</h2>
-    <div class="grid-5">
-      <a href="https://www.numworks.com/simulator/" target="_blank" rel="noopener" class="card">
-        <div class="card-icon">🧮</div>
-        <div class="card-title">Numworks</div>
-        <div class="card-desc">émulateur web</div>
-        <div class="card-tag">numworks.com</div>
-      </a>
-      <a href="https://www.geogebra.org/classic" target="_blank" rel="noopener" class="card">
-        <div class="card-icon">📊</div>
-        <div class="card-title">GeoGebra</div>
-        <div class="card-desc">classique</div>
-        <div class="card-tag">geogebra.org</div>
-      </a>
-      <a href="https://www.youtube.com/@coursdemaths5459" target="_blank" rel="noopener" class="card">
-        <div class="card-icon">▶️</div>
-        <div class="card-title">Cours de maths</div>
-        <div class="card-desc">chaîne YouTube</div>
-        <div class="card-tag">youtube.com</div>
-      </a>
-      <a href="https://www.ecoledirecte.com/CahierDeTexte" target="_blank" rel="noopener" class="card">
-        <div class="card-icon">🏫</div>
-        <div class="card-title">EcoleDirecte</div>
-        <div class="card-desc">cahier de textes</div>
-        <div class="card-tag">ecoledirecte.com</div>
-      </a>
-      <a href="https://indblrasso-my.sharepoint.com/:f:/r/personal/j_lasserre_indblr_asso_fr/Documents/IND%202026?csf=1&web=1&e=JcbbFA" target="_blank" rel="noopener" class="card">
-        <div class="card-icon">☁️</div>
-        <div class="card-title">IND</div>
-        <div class="card-desc">mon OneDrive</div>
-        <div class="card-tag">onedrive</div>
-      </a>
-      <a href="https://scratch.mit.edu/projects/editor/" target="_blank" rel="noopener" class="card">
-        <div class="card-icon">🐱</div>
-        <div class="card-title">Scratch</div>
-        <div class="card-desc">programmation par briques</div>
-        <div class="card-tag">scratch.mit.edu</div>
-      </a>
-    </div>
-  </section>
-
-  <footer>
-    jlp Maths Tools · maths-jlp.github.io/ind
-  </footer>
-</div>
+  <div class="actions">
+    <a class="bouton qcm" href="eval.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>QCM</a>
+    <a class="bouton entr" href="entrainement.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/></svg>Entraînement</a>
+  </div>
+</main>
 
 <script>
-  function switchNiveau(evt, niveau) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.niveau-content').forEach(c => c.classList.remove('active'));
-    evt.target.classList.add('active');
-    document.getElementById('niveau-' + niveau).classList.add('active');
-  }
+// Affiche le chapitre en cours de chaque ligne sous son nom (facultatif : la page marche sans).
+const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
+document.querySelectorAll("[data-encours]").forEach(el => {
+  fetch(API + "/api/frise/" + el.dataset.encours).then(r => r.json()).then(d => {
+    const ch = (d.chapitres || []).filter(c => !c.termine).pop() || (d.chapitres || []).slice(-1)[0];
+    if (ch) el.textContent = "En ce moment : " + ch.titre;
+  }).catch(() => {});
+});
 </script>
-
 </body>
 </html>

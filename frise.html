@@ -56,9 +56,6 @@ select{background:var(--surface);border:1px solid var(--rule);border-radius:7px;
 .arret{position:relative;z-index:1;width:18px;height:18px;border-radius:50%;border:4px solid var(--future);background:var(--surface)}
 .passe .arret{border-color:var(--line);background:var(--line)}
 .ici-st .arret{width:22px;height:22px;border:5px solid var(--line);box-shadow:0 0 0 4px var(--line-soft)}
-@keyframes clignote{0%,100%{box-shadow:0 0 0 3px rgba(255,204,0,.25);background:var(--surface)}50%{box-shadow:0 0 0 7px rgba(255,204,0,.85);background:#ffd400}}
-@media (prefers-reduced-motion:no-preference){.ici-st .arret{animation:clignote 1.6s ease-in-out infinite}}
-@media (prefers-reduced-motion:reduce){.ici-st .arret{box-shadow:0 0 0 5px rgba(255,204,0,.8)}}
 .nom{font-family:var(--f-display);font-weight:700;font-size:13px;line-height:1.15;text-align:center;text-wrap:balance;color:var(--fg);text-decoration:none}
 a.nom{border-bottom:2px solid var(--line-soft)}
 .futur .nom{color:var(--muted)}
@@ -110,6 +107,7 @@ button.exo:hover{border-color:var(--line)}
 
 <div class="bandeau">
   <div class="haut">
+    <a class="btn" id="retour-ligne" href="ligne.html">◂ Ma ligne</a>
     <span class="classe" id="classe-lbl">—</span>
     <h1 id="titre-chap">Chargement…</h1>
     <span class="ici" id="ici"></span>
@@ -154,7 +152,12 @@ const icon = (id, w=14) => `<svg width="${w}" height="${w}" aria-hidden="true"><
 const classe = new URLSearchParams(location.search).get("classe") || "terminale";
 let chapitres = [], idx = 0;
 
-$("#classe-lbl").textContent = CLASSES[classe] || classe;
+const LIGNES = {"4eme":["4","#BB4D98","#fff"], "1ere":["1","#FFCD00","#0E2A47"], "terminale":["T","#E2231A","#fff"]};
+const LG = LIGNES[classe] || ["?","#1f5fbf","#fff"];
+$("#classe-lbl").textContent = "Ligne " + LG[0] + " · " + (CLASSES[classe] || classe);
+$("#classe-lbl").style.background = LG[1]; $("#classe-lbl").style.color = LG[2];
+$("#retour-ligne").href = "ligne.html?classe=" + encodeURIComponent(classe);
+$("#retour-ligne").textContent = "◂ Ligne " + LG[0];
 document.title = "Ma ligne " + (CLASSES[classe] || classe);
 $("#legende").innerHTML =
   `<span><span class="pastille" style="background:var(--vert)"></span>Facile</span>
@@ -166,6 +169,8 @@ $("#legende").innerHTML =
 fetch(API + "/api/frise/" + encodeURIComponent(classe)).then(r => r.json()).then(d => {
   chapitres = d.chapitres || [];   // ordre chronologique
   idx = Math.max(0, chapitres.length - 1);   // le plus récent par défaut
+  const voulu = new URLSearchParams(location.search).get("chap");
+  if (voulu){ const k = chapitres.findIndex(c => c.id === voulu); if (k >= 0) idx = k; }
   if (d.maj) $("#maj").textContent = "Mis à jour le " + new Date(d.maj).toLocaleDateString("fr-FR", {day:"numeric", month:"long"});
   const sel = $("#sel-chap");
   sel.innerHTML = chapitres.map((c,i) => `<option value="${i}">${i+1}. ${esc(c.titre)}${c.termine ? " ✓" : ""}</option>`).join("");

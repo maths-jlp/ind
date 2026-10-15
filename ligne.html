@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ma ligne</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@500;600;700;800;900&display=swap">
+<style>
+/* Page de classe : une seule grande ligne, chaque arrêt est un chapitre de l'année. */
+:root{
+  --fond:#F7F6F2; --encre:#0E2A47; --muted:#5A6B7E; --gris:#C9CDD3; --vert:#16906F;
+  --c:#BB4D98; --c-txt:#fff; --c-doux:rgba(187,77,152,.18);
+  --f:"Overpass","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--fond);color:var(--encre);font-family:var(--f)}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:3px solid var(--encre);outline-offset:3px;border-radius:8px}
+
+header{background:var(--encre);color:#fff;border-bottom:6px solid var(--vert);padding:18px max(20px,env(safe-area-inset-right,0px)) 18px max(20px,env(safe-area-inset-left,0px));padding-top:calc(18px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.retour{font-weight:700;font-size:14px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.12)}
+.retour:hover{background:rgba(255,255,255,.22)}
+.pastille{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:30px;background:var(--c);color:var(--c-txt);flex:none}
+h1{margin:0;font-size:30px;font-weight:800;line-height:1.05}
+.sous{font-size:14px;font-weight:600;opacity:.75;margin-top:4px}
+
+main{padding:40px max(20px,env(safe-area-inset-right,0px)) 40px max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:28px}
+.ligne-box{overflow-x:auto;padding:30px 10px 10px}
+.ligne{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);min-width:min-content}
+.arret{display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 6px;position:relative;text-align:center}
+.rail{position:relative;width:100%;height:40px;display:flex;justify-content:center;align-items:center}
+.rail::before,.rail::after{content:"";position:absolute;top:50%;height:14px;margin-top:-7px;background:var(--c)}
+.rail::before{left:-6px;right:50%}.rail::after{left:50%;right:-6px}
+.arret:first-child .rail::before{left:50%;border-radius:7px 0 0 7px;display:none}
+.arret:last-child .rail::after{display:none}
+.point{position:relative;z-index:1;width:30px;height:30px;border-radius:50%;background:#fff;border:6px solid var(--encre)}
+.fait .point{background:var(--encre)}
+.ici .point{width:42px;height:42px;border:8px solid var(--encre);box-shadow:0 0 0 8px var(--c-doux)}
+.badge{position:absolute;top:-26px;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--encre);white-space:nowrap}
+.nom{font-size:18px;font-weight:800;line-height:1.15;text-wrap:balance}
+.arret:hover .nom{text-decoration:underline;text-decoration-color:var(--c);text-decoration-thickness:3px;text-underline-offset:4px}
+.etat{font-size:13px;font-weight:600;color:var(--muted)}
+.vide{background:#fff;border-radius:14px;padding:28px;text-align:center;color:var(--muted);font-weight:600}
+
+.bas{display:flex;gap:10px;flex-wrap:wrap}
+.bouton{display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;font-weight:800;font-size:16px}
+.bouton.qcm{background:var(--vert);color:#fff}
+.bouton.entr{background:#fff;color:var(--encre);border:2px solid var(--vert)}
+.legende{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-weight:600;align-items:center}
+.legende span{display:inline-flex;gap:6px;align-items:center}
+.mini{width:14px;height:14px;border-radius:50%;border:3px solid var(--encre);background:#fff;display:inline-block}
+</style>
+</head>
+<body>
+<header>
+  <a class="retour" href="index.html">◂ Plan du réseau</a>
+  <span class="pastille" id="pastille">4</span>
+  <div><h1 id="titre">Ligne</h1><div class="sous">Les chapitres de l'année · clique sur un arrêt</div></div>
+</header>
+<main>
+  <div id="zone"><div class="vide">Chargement de la ligne…</div></div>
+  <div class="legende">
+    <span><span class="mini" style="background:var(--encre)"></span>Chapitre terminé</span>
+    <span><span class="mini" style="box-shadow:0 0 0 4px var(--c-doux)"></span>Chapitre en cours</span>
+    <span><span class="mini"></span>Autre chapitre</span>
+  </div>
+  <div class="bas">
+    <a class="bouton qcm" href="eval.html">QCM</a>
+    <a class="bouton entr" href="entrainement.html">Entraînement</a>
+  </div>
+</main>
+<script>
+const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
+const LIGNES = {
+  "4eme":      {num:"4", nom:"4ème",          c:"#BB4D98", txt:"#fff",    doux:"rgba(187,77,152,.2)"},
+  "1ere":      {num:"1", nom:"1ère spé",      c:"#FFCD00", txt:"#0E2A47", doux:"rgba(255,205,0,.35)"},
+  "terminale": {num:"T", nom:"Terminale spé", c:"#E2231A", txt:"#fff",    doux:"rgba(226,35,26,.2)"}
+};
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const classe = LIGNES[new URLSearchParams(location.search).get("classe")] ? new URLSearchParams(location.search).get("classe") : "4eme";
+const L = LIGNES[classe];
+const root = document.documentElement.style;
+root.setProperty("--c", L.c); root.setProperty("--c-txt", L.txt); root.setProperty("--c-doux", L.doux);
+document.getElementById("pastille").textContent = L.num;
+document.getElementById("titre").textContent = "Ligne " + L.num + " · " + L.nom;
+document.title = "Ligne " + L.num + " · " + L.nom;
+
+fetch(API + "/api/frise/" + classe).then(r => r.json()).then(d => {
+  const ch = d.chapitres || [];
+  const zone = document.getElementById("zone");
+  if (!ch.length){ zone.innerHTML = '<div class="vide">La ligne est encore en travaux : aucun chapitre pour l\'instant.</div>'; return; }
+  // Chapitre en cours : le plus récent non terminé.
+  let ici = -1;
+  for (let i = ch.length - 1; i >= 0; i--) if (!ch[i].termine){ ici = i; break; }
+  zone.innerHTML = '<div class="ligne-box"><div class="ligne">' + ch.map((c, i) => {
+    const etat = c.termine ? "fait" : i === ici ? "ici" : "";
+    const n = c.notions ? c.notions.length : 0;
+    const info = c.termine ? "Terminé" : i === ici ? (c.notions[Math.min(c.courant, n - 1)] ? "En ce moment : " + c.notions[Math.min(c.courant, n - 1)].titre : "En cours") : n + " notion" + (n > 1 ? "s" : "");
+    return `<a class="arret ${etat}" href="frise.html?classe=${classe}&chap=${encodeURIComponent(c.id)}">
+      <span class="rail">${etat === "ici" ? '<span class="badge">On est ici</span>' : ""}<span class="point"></span></span>
+      <span class="nom">${esc(c.titre)}</span>
+      <span class="etat">${esc(info)}</span>
+    </a>`;
+  }).join("") + "</div></div>";
+}).catch(() => { document.getElementById("zone").innerHTML = '<div class="vide">Trafic interrompu : la ligne n\'a pas pu être chargée.</div>'; });
+</script>
+</body>
+</html>
