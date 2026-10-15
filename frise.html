@@ -188,8 +188,12 @@ function render(){
   $("#ici").innerHTML = c.termine ? "<b>Chapitre terminé</b>" : c.notions[cur] ? `On en est à : <b>${esc(c.notions[cur].titre)}</b>` : "";
   $("#prec").hidden = $("#suiv").hidden = chapitres.length < 2;
   $("#prec").disabled = idx <= 0; $("#suiv").disabled = idx >= chapitres.length - 1;
-  const coursF = c.pdf || c.lien;
-  $("#lien-cours").innerHTML = lienOk(coursF) ? (lisible(coursF) ? `<button class="btn lien-cours" data-cours="${esc(coursF)}" data-titre="${esc("Cours — " + c.titre)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/></svg>Voir le cours</button>` : `<a class="btn lien-cours" href="${esc(urlF(coursF))}" target="_blank" rel="noopener">Voir le cours ↗</a>`) : "";
+  const modeCours = c.termine && c.cours === "progressif" ? "complet" : (c.cours || "cache");
+  const livre = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/></svg>';
+  $("#lien-cours").innerHTML = (c.lien && modeCours !== "cache")
+    ? `<button class="btn lien-cours" id="voir-cours" title="${modeCours === "progressif" ? "Le cours jusqu'à la notion en cours" : "Le cours complet"}">${livre}Voir le cours</button>` : "";
+  const vc = document.getElementById("voir-cours");
+  if (vc) vc.onclick = () => ouvrirCours(c, modeCours);
   $("#ligne").innerHTML = c.notions.map((no, i) => {
     const etat = i < cur ? "passe" : i === cur ? "ici-st" : "futur";
     const ex = c.exos.filter(e => e.notion === no.id);
@@ -206,7 +210,7 @@ function render(){
       }).join("")}</div>
     </div>`;
   }).join("");
-  document.querySelectorAll("[data-cours]").forEach(b => b.onclick = () => ouvrir({ref:b.dataset.titre, fichier:b.dataset.cours}));
+  document.querySelectorAll("#ligne [data-cours]").forEach(b => b.onclick = () => ouvrir({ref:b.dataset.titre, fichier:b.dataset.cours}));
   $("#ligne").querySelectorAll("[data-ouvrir]").forEach(b => b.onclick = () => {
     const [i, k] = b.dataset.ouvrir.split(":").map(Number);
     const ex = c.exos.filter(e => e.notion === c.notions[i].id)[k];
@@ -234,7 +238,28 @@ function ouvrir(e){
   if (/\.tex$/i.test(url)){
     doc.hidden = false;
     $("#lect-contenu").innerHTML = "<p>Chargement…</p>";
-    fetch(url + "?v=" + Date.now()).then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => {
+    fetch(url + "?v=" + Date.now()).then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => rendreTex(t)).catch(() => { $("#lect-contenu").innerHTML = "<p>Le fichier n'a pas pu être chargé.</p>"; });
+  } else {
+    pdf.hidden = false; pdf.src = url;
+  }
+}
+function ouvrirCours(c, mode){
+  const url = API + "/api/frise-cours/" + encodeURIComponent(c.id);
+  $("#lect-titre").textContent = "Cours — " + c.titre + (mode === "progressif" ? " (jusqu'à la notion en cours)" : "");
+  $("#lect-ouvrir").href = url;
+  $("#lecteur").hidden = false;
+  const pdf = $("#lect-pdf"), doc = $("#lect-doc");
+  pdf.hidden = true; doc.hidden = false; pdf.removeAttribute("src");
+  $("#lect-contenu").innerHTML = "<p>Chargement…</p>";
+  fetch(url).then(r => {
+    if (!r.ok) throw 0;
+    if ((r.headers.get("Content-Type") || "").includes("pdf")){ doc.hidden = true; pdf.hidden = false; pdf.src = url; return; }
+    return r.text().then(t => rendreTex(t));
+  }).catch(() => { $("#lect-contenu").innerHTML = "<p>Le cours n'est pas disponible pour le moment.</p>"; });
+}
+function rendreTex(t){
+  {
+    {
       $("#lect-contenu").innerHTML = texVersHtml(t);
       if (window.renderMathInElement) renderMathInElement($("#lect-contenu"), {
         delimiters:[{left:"$$",right:"$$",display:true},{left:"\\[",right:"\\]",display:true},{left:"\\(",right:"\\)",display:false},{left:"$",right:"$",display:false},
@@ -243,9 +268,7 @@ function ouvrir(e){
           {left:"\\begin{cases}",right:"\\end{cases}",display:true}],
         throwOnError:false, macros:{"\\R":"\\mathbb{R}","\\N":"\\mathbb{N}","\\Z":"\\mathbb{Z}","\\Q":"\\mathbb{Q}","\\C":"\\mathbb{C}"}
       });
-    }).catch(() => { $("#lect-contenu").innerHTML = "<p>Le fichier n'a pas pu être chargé.</p>"; });
-  } else {
-    pdf.hidden = false; pdf.src = url;
+    }
   }
 }
 $("#lect-fermer").onclick = () => { $("#lecteur").hidden = true; $("#lect-pdf").removeAttribute("src"); };

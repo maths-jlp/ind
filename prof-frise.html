@@ -202,6 +202,11 @@ body.proj .panneaux,body.proj #nouveau-form,body.proj #export-zone{display:none}
         <select id="imp-classe" aria-label="Classe"></select>
         <span class="note" id="imp-nomfichier"></span>
       </div>
+      <div class="ligne-form">
+        <label for="imp-cours" class="lbl note" style="font-weight:700">Cours pour les élèves</label>
+        <select id="imp-cours"><option value="cache">Caché aux élèves</option><option value="progressif">Jusqu'à la notion en cours</option><option value="complet">En entier</option></select>
+        <span class="note">« Jusqu'à la notion en cours » montre le .tex mis en forme, coupé après la partie où vous en êtes.</span>
+      </div>
       <div class="ligne-form" id="imp-pdf-zone">
         <label class="btn" for="imp-pdf" style="cursor:pointer">Ajouter le PDF du cours (conseillé)</label>
         <input type="file" id="imp-pdf" accept=".pdf" hidden>
@@ -380,7 +385,7 @@ function renderHaut(){
   frise.innerHTML = `
     <div class="resume">
       <div class="ici">${icon("i-encours",18)}<span>On en est à : <b>${esc(c.notions[cur] ? c.notions[cur].titre : "—")}</b></span></div>
-      ${lienOk(c.lien) ? `<a class="lien-cours" href="${esc(urlFichier(c.pdf || c.lien))}" target="_blank" rel="noopener" title="Ce que voient les élèves avec « Voir le cours »">Cours : ${esc((c.pdf || c.lien).split("/").pop())} ↗</a>` : `<span class="stat">Pas de cours associé</span>`}
+      ${lienOk(c.lien) ? `<button class="lien-cours" id="apercu-cours" style="background:none;cursor:pointer" title="Aperçu du fichier">Cours : ${esc((c.pdf || c.lien).split("/").pop())} ↗</button><span class="stat">${({cache:"caché aux élèves", progressif:"élèves : jusqu'à la notion en cours", complet:"élèves : cours entier"})[c.cours || "cache"]}</span>` : `<span class="stat">Pas de cours associé</span>`}
       <span class="stat"><strong>${cur+1}</strong> / ${c.notions.length} notions</span>
       <span class="stat"><strong>${n("fait")}</strong> faits · <strong>${n("en_cours")}</strong> en cours · <strong>${n("a_faire")}</strong> à faire</span>
       <span class="stat">${icon("i-maison",14).replace("<svg","<svg style='display:inline;vertical-align:-2px'")} <strong>${maisonAFaire}</strong> à la maison non terminés</span>
@@ -417,6 +422,16 @@ function renderHaut(){
         </div>`;
       }).join("")}
     </div></div>`;
+  const ap = document.getElementById("apercu-cours");
+  if (ap && c) ap.onclick = async () => {
+    const nom = c.pdf || c.lien; const w = window.open("", "_blank");
+    try {
+      const r = await fetch(API + "/api/admin/frise-file/" + encodeURIComponent(nom), {headers:{Authorization:"Bearer " + TOKEN}});
+      if (!r.ok) throw 0;
+      const b = await r.blob(); const u = URL.createObjectURL(b);
+      if (w) w.location = u; else location.href = u;
+    } catch(e){ if (w) w.close(); toast("Aperçu impossible"); }
+  };
   $("#avancer").onclick = () => { c.courant = Math.min(cur+1, c.notions.length-1); sauver(c, 0); render(); };
   $("#reculer").onclick = () => { c.courant = Math.max(cur-1, 0); sauver(c, 0); render(); };
   frise.querySelectorAll("[data-aller]").forEach(b => b.onclick = () => { c.courant = +b.dataset.aller; sauver(c, 0); render(); });
@@ -486,6 +501,8 @@ function renderPanneaux(){
         <select id="ch-classe" aria-label="Classe">${CLASSES.map(([k,l]) => `<option value="${k}" ${k===c.classe?"selected":""}>${l}</option>`).join("")}</select>
       </div>
       <span class="note">Cours : ${lienOk(c.lien) ? `<b>${esc(c.lien)}</b>` : "aucun (bouton « Importer un cours » en haut)"}${c.pdf ? ` · PDF élèves : <b>${esc(c.pdf)}</b>` : ""}</span>
+      ${lienOk(c.lien) ? `<div class="ligne-form"><label for="ch-cours" class="note" style="font-weight:700">Cours pour les élèves</label>
+        <select id="ch-cours">${'<option value="cache">Caché aux élèves</option><option value="progressif">Jusqu\'à la notion en cours</option><option value="complet">En entier</option>'.replace(`value="${c.cours || "cache"}"`, `value="${c.cours || "cache"}" selected`)}</select></div>` : ""}
       <div class="ligne-form"><label class="btn" for="ch-pdf" style="cursor:pointer">${c.pdf ? "Remplacer le PDF du cours" : "Ajouter le PDF du cours"}</label><input type="file" id="ch-pdf" accept=".pdf" hidden></div>
       <label class="check"><input type="checkbox" id="ch-publie" ${c.publie!==false?"checked":""}> Visible par les élèves sur le site</label>
       <label class="check"><input type="checkbox" id="ch-termine" ${c.termine?"checked":""}> Chapitre terminé (gardé dans l'historique des élèves)</label>
@@ -550,6 +567,7 @@ function renderPanneaux(){
     catch(e){ if (e.code !== "auth") toast("Envoi impossible : " + (e.message || "réseau")); }
   };
   $("#ch-publie").onchange = ev => { c.publie = ev.target.checked; sauver(c,0); renderHaut(); };
+  const selCours = $("#ch-cours"); if (selCours) selCours.onchange = ev => { c.cours = ev.target.value; sauver(c,0); renderHaut(); toast(ev.target.selectedOptions[0].textContent); };
   $("#ch-termine").onchange = ev => { c.termine = ev.target.checked; sauver(c,0); renderHaut(); };
 
   p.querySelectorAll("[data-nnom]").forEach(inp => inp.oninput = () => { const n = c.notions.find(n => n.id === inp.dataset.nnom); n.titre = inp.value; sauver(c); renderHaut(); });
@@ -721,7 +739,7 @@ $("#imp-valider").onclick = () => {
   const notions = imp.notions.map(t => String(t).trim()).filter(Boolean);
   if (!titre){ $("#imp-titre").focus(); return; }
   if (!notions.length){ $("#imp-msg").textContent = "Ajoutez au moins une station."; return; }
-  const c = {id:uid("c"), titre, classe:$("#imp-classe").value, publie:true, lien:imp.fichier, pdf:imp.pdf || "", cree:Date.now(), courant:0,
+  const c = {id:uid("c"), titre, classe:$("#imp-classe").value, publie:true, cours:$("#imp-cours").value, lien:imp.fichier, pdf:imp.pdf || "", cree:Date.now(), courant:0,
     notions:notions.map(t => ({id:uid("n"), titre:t})), exos:[]};
   chapitres[c.id] = c; classeActive = c.classe; ls.set("frise.classe", classeActive); trier();
   actif = c.id; ls.set("frise.actif", actif); selExo = null;
