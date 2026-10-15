@@ -308,7 +308,36 @@ function partieDuCours(tex, c, n){
   const fin = k + 1 < triees.length ? pos[triees[k + 1]] : corps.length;
   return src.slice(0, corpsDeb) + "\n" + corps.slice(pos[n.ancre], fin) + "\n\\end{document}\n";
 }
-async function genererQcm(c, n, bouton){
+// Un QCM de station n'est ouvert aux élèves que lorsque la ligne a atteint la station.
+async function syncQcm(c){
+  const cur = c.termine ? c.notions.length : (c.courant || 0);
+  const niveau = NIVEAUX_QCM[c.classe] || "";
+  let change = false;
+  for (const [i, n] of c.notions.entries()){
+    if (!n.qcm) continue;
+    const voulu = c.publie !== false && i <= cur;
+    if (!!n.qcmPublie === voulu) continue;
+    try {
+      await api("POST", "/api/admin/quiz/" + encodeURIComponent(n.qcm) + "/practice", voulu ? {on: true, level: niveau} : {on: false});
+      n.qcmPublie = voulu; change = true;
+    } catch(e){ /* réessayé au prochain enregistrement */ }
+  }
+  return change;
+}
+async function genererTousQcm(c, bouton){
+  const aFaire = c.notions.filter(n => Number.isInteger(n.ancre) && !n.qcm);
+  if (!aFaire.length){ toast("Toutes les stations reliées au cours ont déjà leur QCM"); return; }
+  bouton.disabled = true; let ok = 0;
+  for (const [k, n] of aFaire.entries()){
+    bouton.textContent = `Génération ${k + 1} / ${aFaire.length}… (≈ 30 s chacun)`;
+    const r = await genererQcm(c, n, null, true);
+    if (!r) break; ok++;
+  }
+  bouton.disabled = false; bouton.textContent = "Générer tous les QCM manquants";
+  toast(ok + " QCM créé" + (ok > 1 ? "s" : "") + (ok < aFaire.length ? " — arrêt sur une erreur (plafond du jour ?)" : "") + ". Ils s'ouvriront aux élèves au fil de la ligne.");
+  renderPanneaux();
+}
+async function genererQcm(c, n, bouton, silencieux){
   const tex = texBrut[c.lien];
   if (!tex){ toast("Cours illisible"); return; }
   const partie = partieDuCours(tex, c, n);
@@ -319,12 +348,15 @@ async function genererQcm(c, n, bouton){
   try {
     const g = await api("POST", "/api/admin/generate", {tex: partie, n: 5, niveau, titre: c.titre + " — " + n.titre, difficulte: "moyen"});
     await api("PUT", "/api/admin/quiz/" + encodeURIComponent(id), g.quiz);
-    await api("POST", "/api/admin/quiz/" + encodeURIComponent(id) + "/practice", {on: true, level: niveau});
-    n.qcm = id; sauver(c, 0); renderPanneaux(); renderHaut();
-    toast("QCM créé pour « " + n.titre + " » : il apparaît sous la station");
+    n.qcm = id; n.qcmPublie = false;
+    await syncQcm(c);
+    sauver(c, 0); renderPanneaux(); renderHaut();
+    if (!silencieux) toast("QCM créé pour « " + n.titre + " »" + (n.qcmPublie ? " : visible sous la station" : " : il sera visible quand la ligne atteindra cette station"));
+    return true;
   } catch(e){
-    if (e.code !== "auth") toast("QCM impossible : " + (e.message || "réseau"));
+    if (e.code !== "auth") toast("QCM impossible pour « " + n.titre + " » : " + (e.message || "réseau"));
     if (bouton){ bouton.disabled = false; bouton.textContent = "Générer un QCM"; }
+    return false;
   }
 }
 function coursTex(c){ return c && /\.tex$/i.test(c.lien || ""); }
@@ -359,6 +391,7 @@ function ecrire(id){
     const copie = JSON.parse(JSON.stringify(ch));
     try {
       await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(id), copie);
+      if (ch.notions.some(n => n.qcm) && await syncQcm(ch)) await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(id), JSON.parse(JSON.stringify(ch)));
       if (!Object.values(timers).some(Boolean)) etatSave("✓ Enregistré en ligne");
     } catch(e){ etatSave("✕ Non enregistré", "erreur"); if (e.code !== "auth") toast("Enregistrement impossible : " + (e.message || "réseau")); }
     if (!timers[id]) dirty.delete(id);
@@ -560,7 +593,8 @@ function renderPanneaux(){
         <button class="btn" type="button" id="ch-tard">Plus tard ▸</button></div>
       <label class="check"><input type="checkbox" id="ch-termine" ${c.termine?"checked":""}> Chapitre terminé (gardé dans l'historique des élèves)</label>
       <span class="lbl note" style="font-weight:700">Stations de la ligne${coursTex(c) ? " et partie du cours où chacune commence" : ""}</span>
-      ${coursTex(c) && H ? `<div class="ligne-form"><button class="btn" type="button" id="anc-auto">Associer automatiquement les parties</button><span class="note">Sert au mode « jusqu'à la notion en cours ».</span></div>` : coursTex(c) ? `<span class="note">${H === false ? "Titres du cours illisibles." : "Lecture des titres du cours…"}</span>` : ""}
+      ${coursTex(c) && H ? `<div class="ligne-form"><button class="btn" type="button" id="anc-auto">Associer automatiquement les parties</button>
+        <button class="btn" type="button" id="qcm-tous">Générer tous les QCM manquants</button><span class="note">Sert au mode « jusqu'à la notion en cours ».</span></div>` : coursTex(c) ? `<span class="note">${H === false ? "Titres du cours illisibles." : "Lecture des titres du cours…"}</span>` : ""}
       <ul class="notions">
         ${c.notions.map((n,i) => `<li><span class="num">${i+1}</span>
           <input type="text" data-nnom="${n.id}" value="${esc(n.titre)}" aria-label="Notion ${i+1}">
@@ -570,7 +604,7 @@ function renderPanneaux(){
           ${H ? `<select class="url" data-nanc="${n.id}" aria-label="Partie du cours où commence la notion ${i+1}">${optionsAncres(H, Number.isInteger(n.ancre) ? n.ancre : null)}</select>
           <span class="url" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:0;border:0">
             <button class="btn" type="button" data-nqcm="${n.id}" ${Number.isInteger(n.ancre) ? "" : "disabled title=\"Choisissez d'abord la partie du cours\""}>${n.qcm ? "Refaire le QCM" : "Générer un QCM"}</button>
-            ${n.qcm ? `<a class="note" href="entrainement.html?q=${encodeURIComponent(n.qcm)}" target="_blank" rel="noopener">QCM en ligne ✓ — voir ↗</a>` : `<span class="note">5 questions sur cette partie</span>`}
+            ${n.qcm ? (n.qcmPublie ? `<a class="note" href="entrainement.html?q=${encodeURIComponent(n.qcm)}" target="_blank" rel="noopener">QCM ouvert aux élèves ✓ — voir ↗</a>` : `<span class="note">QCM prêt, s'ouvrira quand la ligne atteindra cette station</span>`) : `<span class="note">5 questions sur cette partie</span>`}
           </span>` : ""}</li>`).join("")}
       </ul>
       <form class="ligne-form" id="form-notion"><input type="text" id="nn-titre" placeholder="Nouvelle notion"><button class="btn" type="submit">Ajouter</button></form>
@@ -640,6 +674,7 @@ function renderPanneaux(){
   $("#ch-tot").onclick = () => deplacerChap(-1);
   $("#ch-tard").onclick = () => deplacerChap(1);
 
+  const qt = $("#qcm-tous"); if (qt) qt.onclick = () => genererTousQcm(c, qt);
   p.querySelectorAll("[data-nqcm]").forEach(b => b.onclick = () => {
     const n = c.notions.find(n => n.id === b.dataset.nqcm); if (n) genererQcm(c, n, b);
   });
