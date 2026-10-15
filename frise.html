@@ -167,7 +167,8 @@ $("#legende").innerHTML =
    <span>${icon("i-classe")}En classe</span><span>${icon("i-maison")}À la maison</span><span>${icon("i-doc")}Fichier à ouvrir</span>`;
 
 fetch(API + "/api/frise/" + encodeURIComponent(classe)).then(r => r.json()).then(d => {
-  chapitres = d.chapitres || [];   // ordre chronologique
+  const cle = x => x.ordre ?? x.cree ?? 0;
+  chapitres = (d.chapitres || []).slice().sort((a, b) => cle(a) - cle(b));   // ordre de l'année
   idx = Math.max(0, chapitres.length - 1);   // le plus récent par défaut
   const voulu = new URLSearchParams(location.search).get("chap");
   if (voulu){ const k = chapitres.findIndex(c => c.id === voulu); if (k >= 0) idx = k; }

@@ -291,8 +291,9 @@ const dirty = new Set();     // ids avec écriture en attente
 const timers = {};
 
 /* ---------- Persistance ---------- */
+function cleOrdre(x){ return x.ordre ?? x.cree ?? 0; }
 function trier(){
-  ordre = Object.keys(chapitres).filter(id => chapitres[id].classe === classeActive).sort((a,b) => (chapitres[b].cree||0) - (chapitres[a].cree||0));
+  ordre = Object.keys(chapitres).filter(id => chapitres[id].classe === classeActive).sort((a,b) => cleOrdre(chapitres[b]) - cleOrdre(chapitres[a]));
   if (!chapitres[actif] || chapitres[actif].classe !== classeActive) actif = ordre[0] || null;
 }
 function etatSave(t, cls){ const e = document.getElementById("etat-save"); if (e){ e.textContent = t; e.className = "etat-save " + (cls || ""); } }
@@ -505,6 +506,9 @@ function renderPanneaux(){
         <select id="ch-cours">${'<option value="cache">Caché aux élèves</option><option value="progressif">Jusqu\'à la notion en cours</option><option value="complet">En entier</option>'.replace(`value="${c.cours || "cache"}"`, `value="${c.cours || "cache"}" selected`)}</select></div>` : ""}
       <div class="ligne-form"><label class="btn" for="ch-pdf" style="cursor:pointer">${c.pdf ? "Remplacer le PDF du cours" : "Ajouter le PDF du cours"}</label><input type="file" id="ch-pdf" accept=".pdf" hidden></div>
       <label class="check"><input type="checkbox" id="ch-publie" ${c.publie!==false?"checked":""}> Visible par les élèves sur le site</label>
+      <div class="ligne-form"><span class="note" style="font-weight:700">Place sur la ligne de la classe</span>
+        <button class="btn" type="button" id="ch-tot">◂ Plus tôt dans l'année</button>
+        <button class="btn" type="button" id="ch-tard">Plus tard ▸</button></div>
       <label class="check"><input type="checkbox" id="ch-termine" ${c.termine?"checked":""}> Chapitre terminé (gardé dans l'historique des élèves)</label>
       <span class="lbl note" style="font-weight:700">Stations de la ligne</span>
       <ul class="notions">
@@ -569,6 +573,17 @@ function renderPanneaux(){
   $("#ch-publie").onchange = ev => { c.publie = ev.target.checked; sauver(c,0); renderHaut(); };
   const selCours = $("#ch-cours"); if (selCours) selCours.onchange = ev => { c.cours = ev.target.value; sauver(c,0); renderHaut(); toast(ev.target.selectedOptions[0].textContent); };
   $("#ch-termine").onchange = ev => { c.termine = ev.target.checked; sauver(c,0); renderHaut(); };
+  const deplacerChap = sens => {
+    const liste = Object.values(chapitres).filter(x => x.classe === c.classe).sort((a,b) => cleOrdre(a) - cleOrdre(b));
+    const i = liste.indexOf(c), j = i + sens;
+    if (i < 0 || j < 0 || j >= liste.length){ toast(sens < 0 ? "Déjà le premier chapitre de la ligne" : "Déjà le dernier chapitre de la ligne"); return; }
+    liste.forEach((x, k) => { x.ordre = k * 10; });
+    const voisin = liste[j]; [c.ordre, voisin.ordre] = [voisin.ordre, c.ordre];
+    liste.forEach(x => sauver(x, 0));
+    trier(); render(); toast("Ordre de la ligne modifié");
+  };
+  $("#ch-tot").onclick = () => deplacerChap(-1);
+  $("#ch-tard").onclick = () => deplacerChap(1);
 
   p.querySelectorAll("[data-nnom]").forEach(inp => inp.oninput = () => { const n = c.notions.find(n => n.id === inp.dataset.nnom); n.titre = inp.value; sauver(c); renderHaut(); });
   const deplacer = (i, j) => {

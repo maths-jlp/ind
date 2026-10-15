@@ -86,7 +86,8 @@ document.getElementById("titre").textContent = "Ligne " + L.num + " · " + L.nom
 document.title = "Ligne " + L.num + " · " + L.nom;
 
 fetch(API + "/api/frise/" + classe).then(r => r.json()).then(d => {
-  const ch = d.chapitres || [];
+  const cle = x => x.ordre ?? x.cree ?? 0;
+  const ch = (d.chapitres || []).slice().sort((a, b) => cle(a) - cle(b));
   const zone = document.getElementById("zone");
   if (!ch.length){ zone.innerHTML = '<div class="vide">La ligne est encore en travaux : aucun chapitre pour l\'instant.</div>'; return; }
   // Chapitre en cours : le plus récent non terminé.
