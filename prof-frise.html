@@ -291,6 +291,17 @@ const dirty = new Set();     // ids avec écriture en attente
 const timers = {};
 
 /* ---------- Persistance ---------- */
+const texCache = {};   // nom du .tex -> titres du cours (null si illisible)
+function coursTex(c){ return c && /\.tex$/i.test(c.lien || ""); }
+async function chargerTitres(nom){
+  texCache[nom] = null;
+  try {
+    const r = await fetch(API + "/api/admin/frise-file/" + encodeURIComponent(nom), {headers:{Authorization:"Bearer " + TOKEN}});
+    if (!r.ok) throw 0;
+    texCache[nom] = titresCours(await r.text());
+  } catch(e){ texCache[nom] = false; }
+  if (!document.activeElement || !document.activeElement.closest("#panneaux")) renderPanneaux();
+}
 function cleOrdre(x){ return x.ordre ?? x.cree ?? 0; }
 function trier(){
   ordre = Object.keys(chapitres).filter(id => chapitres[id].classe === classeActive).sort((a,b) => cleOrdre(chapitres[b]) - cleOrdre(chapitres[a]));
@@ -463,6 +474,8 @@ function renderPanneaux(){
   const c = ch(); const p = $("#panneaux"); if (!c || !p) return;
   const cur = Math.min(c.courant, c.notions.length - 1);
   const e = c.exos.find(x => x.id === selExo);
+  const H = coursTex(c) ? texCache[c.lien] : null;
+  if (coursTex(c) && texCache[c.lien] === undefined) chargerTitres(c.lien);
   const optsNotions = sel => c.notions.map(n => `<option value="${n.id}" ${n.id===sel?"selected":""}>${esc(n.titre)}</option>`).join("");
   const nouv = window.__nouv || (window.__nouv = {lieu:"classe", diff:"vert"});
   p.innerHTML = `
@@ -510,13 +523,15 @@ function renderPanneaux(){
         <button class="btn" type="button" id="ch-tot">◂ Plus tôt dans l'année</button>
         <button class="btn" type="button" id="ch-tard">Plus tard ▸</button></div>
       <label class="check"><input type="checkbox" id="ch-termine" ${c.termine?"checked":""}> Chapitre terminé (gardé dans l'historique des élèves)</label>
-      <span class="lbl note" style="font-weight:700">Stations de la ligne</span>
+      <span class="lbl note" style="font-weight:700">Stations de la ligne${coursTex(c) ? " et partie du cours où chacune commence" : ""}</span>
+      ${coursTex(c) && H ? `<div class="ligne-form"><button class="btn" type="button" id="anc-auto">Associer automatiquement les parties</button><span class="note">Sert au mode « jusqu'à la notion en cours ».</span></div>` : coursTex(c) ? `<span class="note">${H === false ? "Titres du cours illisibles." : "Lecture des titres du cours…"}</span>` : ""}
       <ul class="notions">
         ${c.notions.map((n,i) => `<li><span class="num">${i+1}</span>
           <input type="text" data-nnom="${n.id}" value="${esc(n.titre)}" aria-label="Notion ${i+1}">
           <button class="ico-btn" data-nup="${i}" ${i===0?"disabled":""} aria-label="Monter">${icon("i-haut",14)}</button>
           <button class="ico-btn" data-ndown="${i}" ${i===c.notions.length-1?"disabled":""} aria-label="Descendre">${icon("i-bas",14)}</button>
-          <button class="ico-btn" data-ndel="${n.id}" ${c.notions.length<2?"disabled":""} aria-label="Supprimer la notion">${icon("i-x",14)}</button></li>`).join("")}
+          <button class="ico-btn" data-ndel="${n.id}" ${c.notions.length<2?"disabled":""} aria-label="Supprimer la notion">${icon("i-x",14)}</button>
+          ${H ? `<select class="url" data-nanc="${n.id}" aria-label="Partie du cours où commence la notion ${i+1}">${optionsAncres(H, Number.isInteger(n.ancre) ? n.ancre : null)}</select>` : ""}</li>`).join("")}
       </ul>
       <form class="ligne-form" id="form-notion"><input type="text" id="nn-titre" placeholder="Nouvelle notion"><button class="btn" type="submit">Ajouter</button></form>
       <span class="note" id="ndel-msg"></span>
@@ -585,6 +600,16 @@ function renderPanneaux(){
   $("#ch-tot").onclick = () => deplacerChap(-1);
   $("#ch-tard").onclick = () => deplacerChap(1);
 
+  p.querySelectorAll("[data-nanc]").forEach(sel => sel.onchange = () => {
+    const n = c.notions.find(n => n.id === sel.dataset.nanc); if (!n) return;
+    if (sel.value === "") delete n.ancre; else n.ancre = +sel.value;
+    sauver(c, 0);
+  });
+  const aa = $("#anc-auto"); if (aa) aa.onclick = () => {
+    let k = 0;
+    c.notions.forEach(n => { const b = meilleureAncre(n.titre, H); if (b !== null){ n.ancre = b; k++; } });
+    sauver(c, 0); renderPanneaux(); toast(k + " station" + (k > 1 ? "s" : "") + " associée" + (k > 1 ? "s" : "") + " : vérifiez la liste");
+  };
   p.querySelectorAll("[data-nnom]").forEach(inp => inp.oninput = () => { const n = c.notions.find(n => n.id === inp.dataset.nnom); n.titre = inp.value; sauver(c); renderHaut(); });
   const deplacer = (i, j) => {
     const curId = c.notions[cur]?.id;
@@ -671,13 +696,45 @@ function titres(src, cmd){
   while ((m = re.exec(src))) out.push(nettoyer(arg(src, m.index + m[0].length - 1)));
   return out.filter(Boolean);
 }
+// Titres du cours dans l'ordre (\section, \subsection, \subsubsection), même règle que le Worker.
+function titresCours(tex){
+  const src = String(tex || "");
+  const d = src.search(/\\begin\{document\}/);
+  const f = src.search(/\\end\{document\}/);
+  const corps = src.slice(d >= 0 ? d + 16 : 0, f >= 0 ? f : src.length);
+  const sansCom = corps.replace(/(^|[^\\])%.*$/gm, (m, a) => a + " ".repeat(m.length - a.length));
+  const out = []; const re = /\\((?:sub){0,2})section\*?\s*[\[{]/g; let m;
+  while ((m = re.exec(sansCom))){
+    let k = m.index + m[0].length - 1;
+    if (sansCom[k] === "["){ k = sansCom.indexOf("]", k); k = sansCom.indexOf("{", k); }
+    out.push({niv: m[1].length / 3, titre: nettoyer(arg(sansCom, k)) || "(sans titre)"});
+  }
+  return out;
+}
+const normMots = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ").filter(w => w.length >= 3);
+function meilleureAncre(titre, H){
+  const a = new Set(normMots(titre)); let best = null, sc = 0;
+  H.forEach((h, k) => {
+    const mots = [...new Set(normMots(h.titre))];
+    const communs = mots.filter(w => a.has(w) || [...a].some(x => x.startsWith(w.slice(0,5)) || w.startsWith(x.slice(0,5)))).length;
+    const s2 = communs ? communs - 0.1 * (mots.length - communs) : 0;
+    if (s2 > sc){ sc = s2; best = k; }
+  });
+  return best;
+}
+function optionsAncres(H, val){
+  return `<option value="">— partie du cours ? —</option>` + H.map((h, k) => `<option value="${k}" ${val === k ? "selected" : ""}>${"   ".repeat(h.niv)}${esc(h.titre)}</option>`).join("");
+}
 function decouper(tex){
   const src = tex.replace(/(^|[^\\])%.*$/gm, "$1");
   const corps = (src.match(/\\begin\{document\}([\s\S]*)\\end\{document\}/) || [, src])[1];
   let titre = titres(src, "title")[0] || titres(corps, "chapter")[0] || titres(corps, "titre")[0] || "";
-  let n = titres(corps, "section");
-  if (n.length < 2) n = titres(corps, "subsection").length >= 2 ? titres(corps, "subsection") : n.concat(titres(corps, "partie"));
-  return {titre, notions: n.slice(0, 15)};
+  const H = titresCours(tex);
+  let idx = H.map((h, k) => h.niv === 0 ? k : -1).filter(k => k >= 0);
+  if (idx.length < 2) idx = H.map((h, k) => h.niv === 1 ? k : -1).filter(k => k >= 0);
+  if (idx.length >= 2) return {titre, H, notions: idx.slice(0, 15).map(k => H[k].titre), ancres: idx.slice(0, 15)};
+  const n = titres(corps, "partie");
+  return {titre, H, notions: n.slice(0, 15), ancres: n.slice(0, 15).map(() => null)};
 }
 function nomDepuisFichier(f){ return f.replace(/\.(tex|pdf)$/i, "").replace(/[_\-]+/g, " ").replace(/^\s*\d+\s*[.\s]\s*/, "").trim(); }
 function ouvrirImport(){
@@ -689,16 +746,18 @@ function fermerImport(){ $("#import-zone").hidden = true; imp = null; }
 function renderImp(){
   $("#imp-notions").innerHTML = imp.notions.map((t,i) => `<li><span class="num">${i+1}</span>
     <input type="text" data-inom="${i}" value="${esc(t)}" aria-label="Station ${i+1}">
+    ${imp.H && imp.H.length ? `<select data-ianc="${i}" aria-label="Partie du cours où commence la station ${i+1}" style="max-width:220px">${optionsAncres(imp.H, imp.ancres[i])}</select>` : ""}
     <button class="ico-btn" type="button" data-iup="${i}" ${i===0?"disabled":""} aria-label="Monter">${icon("i-haut",14)}</button>
     <button class="ico-btn" type="button" data-idown="${i}" ${i===imp.notions.length-1?"disabled":""} aria-label="Descendre">${icon("i-bas",14)}</button>
     <button class="ico-btn" type="button" data-idel="${i}" aria-label="Retirer">${icon("i-x",14)}</button></li>`).join("")
     || `<li class="note">Aucune partie trouvée dans le fichier : ajoutez les stations à la main${sampleFn ? " ou demandez à Claude" : ""}.</li>`;
   const z = $("#imp-notions");
   z.querySelectorAll("[data-inom]").forEach(i => i.oninput = () => { imp.notions[+i.dataset.inom] = i.value; });
-  const mv = (i,j) => { const [x] = imp.notions.splice(i,1); imp.notions.splice(j,0,x); renderImp(); };
+  z.querySelectorAll("[data-ianc]").forEach(sel => sel.onchange = () => { imp.ancres[+sel.dataset.ianc] = sel.value === "" ? null : +sel.value; });
+  const mv = (i,j) => { const [x] = imp.notions.splice(i,1); imp.notions.splice(j,0,x); const [y] = imp.ancres.splice(i,1); imp.ancres.splice(j,0,y); renderImp(); };
   z.querySelectorAll("[data-iup]").forEach(b => b.onclick = () => mv(+b.dataset.iup, +b.dataset.iup - 1));
   z.querySelectorAll("[data-idown]").forEach(b => b.onclick = () => mv(+b.dataset.idown, +b.dataset.idown + 1));
-  z.querySelectorAll("[data-idel]").forEach(b => b.onclick = () => { imp.notions.splice(+b.dataset.idel,1); renderImp(); });
+  z.querySelectorAll("[data-idel]").forEach(b => b.onclick = () => { imp.notions.splice(+b.dataset.idel,1); imp.ancres.splice(+b.dataset.idel,1); renderImp(); });
 }
 const sampleFn = true;   // découpage par Claude via le Worker
 $("#btn-import").onclick = ouvrirImport;
@@ -714,7 +773,8 @@ $("#imp-fichier").onchange = async ev => {
   finally { $("#imp-etape1").querySelector("label").textContent = "Choisir le cours (.tex de préférence)"; }
   const texte = estTex ? await f.text() : "";
   const d = estTex ? decouper(texte) : {titre:"", notions:[]};
-  imp = {fichier:nom, pdf: estTex ? "" : nom, tex:texte, notions:d.notions};
+  imp = {fichier:nom, pdf: estTex ? "" : nom, tex:texte, notions:d.notions, ancres:d.ancres || d.notions.map(() => null), H:d.H || []};
+  if (estTex) texCache[nom] = imp.H;
   $("#imp-pdf-zone").hidden = !estTex; $("#imp-pdf-nom").textContent = "Les élèves verront le PDF, avec figures et encadrés. Sans PDF, ils verront le .tex mis en forme.";
   $("#imp-titre").value = d.titre || nomDepuisFichier(f.name);
   $("#imp-classe").innerHTML = CLASSES.map(([k,l]) => `<option value="${k}" ${k===classeActive?"selected":""}>${l}</option>`).join("");
@@ -731,7 +791,7 @@ $("#imp-pdf").onchange = async ev => {
   try { imp.pdf = await envoyerFichier(f); $("#imp-pdf-nom").textContent = "PDF envoyé : " + imp.pdf; }
   catch(e){ $("#imp-pdf-nom").textContent = "Envoi du PDF impossible."; }
 };
-$("#imp-ajout").onclick = () => { imp.notions.push(""); renderImp(); const l = $("#imp-notions").querySelectorAll("[data-inom]"); l[l.length-1]?.focus(); };
+$("#imp-ajout").onclick = () => { imp.notions.push(""); imp.ancres.push(null); renderImp(); const l = $("#imp-notions").querySelectorAll("[data-inom]"); l[l.length-1]?.focus(); };
 $("#imp-claude").onclick = async () => {
   if (!sampleFn || !imp) return;
   const b = $("#imp-claude"); b.disabled = true; $("#imp-msg").textContent = "Claude lit le cours…";
@@ -739,6 +799,11 @@ $("#imp-claude").onclick = async () => {
     const r = await api("POST", "/api/admin/frise/decoupage", {tex: imp.tex});
     if (r && Array.isArray(r.notions) && r.notions.length){
       imp.notions = r.notions.map(String).slice(0, 15);
+      const deb = Array.isArray(r.debuts) ? r.debuts : [];
+      imp.ancres = imp.notions.map((t, i) => {
+        const exact = imp.H.findIndex(h => normMots(h.titre).join(" ") === normMots(deb[i]).join(" ") && normMots(deb[i]).length);
+        return exact >= 0 ? exact : meilleureAncre(deb[i] || t, imp.H);
+      });
       if (r.titre && !$("#imp-titre").value.trim()) $("#imp-titre").value = r.titre;
       $("#imp-msg").textContent = "Découpage proposé par Claude : modifiez-le si besoin.";
       renderImp();
@@ -755,7 +820,7 @@ $("#imp-valider").onclick = () => {
   if (!titre){ $("#imp-titre").focus(); return; }
   if (!notions.length){ $("#imp-msg").textContent = "Ajoutez au moins une station."; return; }
   const c = {id:uid("c"), titre, classe:$("#imp-classe").value, publie:true, cours:$("#imp-cours").value, lien:imp.fichier, pdf:imp.pdf || "", cree:Date.now(), courant:0,
-    notions:notions.map(t => ({id:uid("n"), titre:t})), exos:[]};
+    notions:imp.notions.map((t, i) => ({t: String(t).trim(), a: imp.ancres[i]})).filter(x => x.t).map(x => Object.assign({id:uid("n"), titre:x.t}, Number.isInteger(x.a) ? {ancre:x.a} : {})), exos:[]};
   chapitres[c.id] = c; classeActive = c.classe; ls.set("frise.classe", classeActive); trier();
   actif = c.id; ls.set("frise.actif", actif); selExo = null;
   sauver(c, 0); fermerImport(); trier(); render();
