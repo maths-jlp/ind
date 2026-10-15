@@ -25,6 +25,12 @@ h1{margin:0;font-size:30px;font-weight:800;line-height:1.05}
 .sous{font-size:14px;font-weight:600;opacity:.75;margin-top:4px}
 
 main{padding:40px max(20px,env(safe-area-inset-right,0px)) 40px max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:28px}
+/* Plan en Z : la ligne va de gauche à droite, puis repart en diagonale au début de la rangée suivante. */
+.plan{position:relative;width:100%}
+.plan svg{position:absolute;inset:0;overflow:visible;pointer-events:none}
+.plan .arret{position:absolute;transform:translateX(-50%);padding:0}
+.plan .rail{width:auto;height:42px}
+.plan .rail::before,.plan .rail::after{display:none}
 .ligne-box{overflow-x:auto;padding:30px 10px 10px}
 .ligne{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);min-width:min-content}
 .arret{display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 6px;position:relative;text-align:center}
@@ -100,22 +106,61 @@ fetch(API + "/api/frise/" + classe).then(r => r.json()).then(d => {
   // « On est ici » : le chapitre le plus récent ni terminé ni fermé.
   let ici = -1;
   for (let i = ch.length - 1; i >= 0; i--) if (!ch[i].termine && !ch[i].ferme){ ici = i; break; }
-  zone.innerHTML = '<div class="ligne-box"><div class="ligne">' + ch.map((c, i) => {
+  const html = ch.map((c, i) => {
     const verrou = !!c.ferme;
     const etat = verrou ? "verrou" : i === ici ? "ici" : c.termine ? "fait" : "";
     const n = c.notions ? c.notions.length : 0;
-    const info = i === ici && !c.termine ? (c.notions[Math.min(c.courant, n - 1)] ? "En ce moment : " + c.notions[Math.min(c.courant, n - 1)].titre : "En cours") : c.termine ? "Terminé" : i === ici ? (c.notions[Math.min(c.courant, n - 1)] ? "En ce moment : " + c.notions[Math.min(c.courant, n - 1)].titre : "En cours") : n + " notion" + (n > 1 ? "s" : "");
-    if (verrou) return `<div class="arret verrou" aria-disabled="true" title="Ce chapitre n'est pas encore ouvert">
+    const notionEnCours = c.notions && c.notions[Math.min(c.courant, n - 1)];
+    const info = i === ici && !c.termine ? (notionEnCours ? "En ce moment : " + notionEnCours.titre : "En cours") : c.termine ? "Terminé" : n + " notion" + (n > 1 ? "s" : "");
+    if (verrou) return `<div class="arret verrou" data-i="${i}" aria-disabled="true" title="Ce chapitre n'est pas encore ouvert">
       <span class="rail"><span class="point">${CADENAS}</span></span>
       <span class="nom">${esc(c.titre)}</span>
       <span class="etat">Bientôt</span>
     </div>`;
-    return `<a class="arret ${etat}" href="frise.html?classe=${classe}&chap=${encodeURIComponent(c.id)}">
+    return `<a class="arret ${etat}" data-i="${i}" href="frise.html?classe=${classe}&chap=${encodeURIComponent(c.id)}">
       <span class="rail">${etat === "ici" ? '<span class="badge">On est ici</span>' : ""}<span class="point"></span></span>
       <span class="nom">${esc(c.titre)}</span>
       <span class="etat">${esc(info)}</span>
     </a>`;
-  }).join("") + "</div></div>";
+  }).join("");
+  zone.innerHTML = '<div class="plan" id="plan"><svg id="trace" aria-hidden="true"></svg>' + html + '</div>';
+  const placer = () => {
+    const plan = document.getElementById("plan"); if (!plan) return;
+    const W = plan.clientWidth;
+    const parRang = Math.max(2, Math.min(6, Math.floor(W / 190), ch.length));
+    // couloirs de 34 px à gauche et à droite pour les virages : le tracé ne passe jamais sur un nom
+    const couloir = 34, pas = (W - 2 * couloir) / parRang;
+    const arrets = [...plan.querySelectorAll(".arret")];
+    arrets.forEach(a => { a.style.width = (pas - 16) + "px"; });
+    const hEtiq = Math.max(...arrets.map(a => a.offsetHeight));
+    const hRang = hEtiq + 76;
+    const pts = ch.map((_, i) => {
+      const r = Math.floor(i / parRang), k = i % parRang;
+      return [couloir + pas / 2 + k * pas, 36 + r * hRang];
+    });
+    arrets.forEach(a => { const [x, y] = pts[+a.dataset.i]; a.style.left = x + "px"; a.style.top = (y - 21) + "px"; });
+    const rangs = Math.ceil(ch.length / parRang);
+    plan.style.height = (36 + (rangs - 1) * hRang + hEtiq - 21) + "px";
+    // tracé : chaque segment est plus pâle s'il mène à un chapitre fermé
+    const xd = W - couloir / 2, xg = couloir / 2;
+    let svg = "";
+    for (let i = 0; i + 1 < pts.length; i++){
+      const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+      const pale = ch[i + 1].ferme ? ' opacity=".35"' : "";
+      // Z : on descend dans le couloir de droite sous les noms, diagonale dans l'espace libre entre deux rangées,
+      // puis on remonte par le couloir de gauche vers le premier arrêt de la rangée suivante
+      const yA = y1 + hEtiq - 7, yB = y2 - 55;
+      const d = y1 === y2 ? `M${x1} ${y1} L${x2} ${y2}`
+        : `M${x1} ${y1} L${xd - 12} ${y1} L${xd} ${y1 + 12} L${xd} ${yA} L${xg} ${yB} L${xg} ${y2 - 12} L${xg + 12} ${y2} L${x2} ${y2}`;
+      svg += `<path d="${d}" fill="none" stroke="${L.c}" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"${pale}/>`;
+    }
+    const t = document.getElementById("trace");
+    t.setAttribute("width", W); t.setAttribute("height", plan.style.height);
+    t.innerHTML = svg;
+  };
+  placer();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placer);
+  let att; window.addEventListener("resize", () => { clearTimeout(att); att = setTimeout(placer, 120); });
 }).catch(() => { document.getElementById("zone").innerHTML = '<div class="vide">Trafic interrompu : la ligne n\'a pas pu être chargée.</div>'; });
 </script>
 </body>
