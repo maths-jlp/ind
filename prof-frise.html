@@ -43,6 +43,11 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .titre{display:flex;flex-direction:column;gap:4px;min-width:0}
 .eyebrow{font-family:var(--f-display);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 h1{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,3.4vw,36px);line-height:1.1;margin:0;text-wrap:balance}
+h1.editable{cursor:text;border-radius:8px;padding:2px 6px;margin-left:-6px}
+h1.editable:hover{background:var(--surface-2)}
+h1.editable:hover::after{content:" ✎";font-size:.55em;color:var(--muted)}
+h1[contenteditable="true"]{background:var(--surface);outline:2px solid var(--line);cursor:text}
+h1[contenteditable="true"]::after{content:""}
 .chap-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 select,input[type=text]{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:7px 10px;min-width:0}
 .btn{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:7px 12px;font-weight:700;font-size:14px;display:inline-flex;gap:6px;align-items:center}
@@ -174,7 +179,7 @@ body.proj .panneaux,body.proj #nouveau-form,body.proj #export-zone{display:none}
   <header>
     <div class="titre">
       <span class="eyebrow" id="classe-lbl">Progression du chapitre</span>
-      <h1 id="titre-chap">Chargement…</h1>
+      <h1 id="titre-chap" title="Cliquer pour renommer le chapitre">Chargement…</h1>
     </div>
     <div class="chap-bar">
       <div class="classes"><div class="seg" role="group" aria-label="Classe" id="tabs-classes"></div></div>
@@ -375,6 +380,30 @@ function trier(){
   ordre = Object.keys(chapitres).filter(id => chapitres[id].classe === classeActive).sort((a,b) => cleOrdre(chapitres[b]) - cleOrdre(chapitres[a]));
   if (!chapitres[actif] || chapitres[actif].classe !== classeActive) actif = ordre[0] || null;
 }
+// Renommer le chapitre en cliquant sur son titre (Entrée ou clic ailleurs : enregistré ; Échap : annulé).
+(() => {
+  const h1 = document.getElementById("titre-chap");
+  let avant = "";
+  h1.addEventListener("click", () => {
+    const c = chapitres[actif];
+    if (!c || h1.getAttribute("contenteditable") === "true") return;
+    avant = c.titre; h1.setAttribute("contenteditable", "true"); h1.focus();
+    const r = document.createRange(); r.selectNodeContents(h1); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  });
+  const finir = garder => {
+    if (h1.getAttribute("contenteditable") !== "true") return;
+    h1.removeAttribute("contenteditable");
+    const c = chapitres[actif]; if (!c) return;
+    const t = h1.textContent.replace(/\s+/g, " ").trim();
+    if (garder && t && t !== avant){ c.titre = t; sauver(c, 0); render(); toast("Chapitre renommé"); }
+    else h1.textContent = avant;
+  };
+  h1.addEventListener("keydown", ev => {
+    if (ev.key === "Enter"){ ev.preventDefault(); finir(true); h1.blur(); }
+    if (ev.key === "Escape"){ ev.preventDefault(); finir(false); h1.blur(); }
+  });
+  h1.addEventListener("blur", () => finir(true));
+})();
 function etatSave(t, cls){ const e = document.getElementById("etat-save"); if (e){ e.textContent = t; e.className = "etat-save " + (cls || ""); } }
 function sauver(ch, delai=500){
   etatSave("● Enregistrement…", "attente");
@@ -443,7 +472,9 @@ function renderHaut(){
   sel.innerHTML = ordre.map(id => `<option value="${id}" ${id===actif?"selected":""}>${esc(chapitres[id].titre)}${chapitres[id].publie===false?" (masqué)":""}</option>`).join("");
   sel.disabled = !ordre.length;
   const c = ch();
-  $("#titre-chap").textContent = c ? c.titre : (charge ? "Aucun chapitre" : "Chargement…");
+  const h1 = $("#titre-chap");
+  if (h1.getAttribute("contenteditable") !== "true") h1.textContent = c ? c.titre : (charge ? "Aucun chapitre" : "Chargement…");
+  h1.classList.toggle("editable", !!c);
   $("#classe-lbl").textContent = "Progression · " + nomClasse(classeActive);
   $("#voir-eleves").href = SITE + "frise.html?classe=" + classeActive;
   const zone = $("#contenu");
