@@ -40,6 +40,11 @@ main{padding:40px max(20px,env(safe-area-inset-right,0px)) 40px max(20px,env(saf
 .nom{font-size:18px;font-weight:800;line-height:1.15;text-wrap:balance}
 .arret:hover .nom{text-decoration:underline;text-decoration-color:var(--c);text-decoration-thickness:3px;text-underline-offset:4px}
 .etat{font-size:13px;font-weight:600;color:var(--muted)}
+.verrou{cursor:not-allowed}
+.verrou .point{border-color:#B8BEC7;color:#8A93A0;display:grid;place-items:center}
+.verrou .nom{color:#8A93A0}
+.ligne-box .verrou .rail::before,.ligne-box .verrou .rail::after{opacity:.35}
+.arret.verrou:hover .nom{text-decoration:none}
 .vide{background:#fff;border-radius:14px;padding:28px;text-align:center;color:var(--muted);font-weight:600}
 
 .bas{display:flex;gap:10px;flex-wrap:wrap}
@@ -63,6 +68,7 @@ main{padding:40px max(20px,env(safe-area-inset-right,0px)) 40px max(20px,env(saf
     <span><span class="mini" style="background:var(--encre)"></span>Chapitre terminé</span>
     <span><span class="mini" style="box-shadow:0 0 0 4px var(--c-doux)"></span>Chapitre en cours</span>
     <span><span class="mini"></span>Autre chapitre</span>
+    <span><span class="mini" style="border-color:#B8BEC7"></span>Pas encore ouvert</span>
   </div>
   <div class="bas">
     <a class="bouton qcm" href="eval.html">QCM</a>
@@ -76,6 +82,7 @@ const LIGNES = {
   "1ere":      {num:"1", nom:"1ère spé",      c:"#FFCD00", txt:"#0E2A47", doux:"rgba(255,205,0,.35)"},
   "terminale": {num:"T", nom:"Terminale spé", c:"#E2231A", txt:"#fff",    doux:"rgba(226,35,26,.2)"}
 };
+const CADENAS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const classe = LIGNES[new URLSearchParams(location.search).get("classe")] ? new URLSearchParams(location.search).get("classe") : "4eme";
 const L = LIGNES[classe];
@@ -90,13 +97,20 @@ fetch(API + "/api/frise/" + classe).then(r => r.json()).then(d => {
   const ch = (d.chapitres || []).slice().sort((a, b) => cle(a) - cle(b));
   const zone = document.getElementById("zone");
   if (!ch.length){ zone.innerHTML = '<div class="vide">La ligne est encore en travaux : aucun chapitre pour l\'instant.</div>'; return; }
-  // Chapitre en cours : le plus récent non terminé.
-  let ici = -1;
-  for (let i = ch.length - 1; i >= 0; i--) if (!ch[i].termine){ ici = i; break; }
+  // Chapitre « On est ici » : celui choisi par le prof, sinon le plus récent non terminé.
+  let ici = ch.findIndex(c => c.ici);
+  const choisi = ici >= 0;
+  if (!choisi) for (let i = ch.length - 1; i >= 0; i--) if (!ch[i].termine){ ici = i; break; }
   zone.innerHTML = '<div class="ligne-box"><div class="ligne">' + ch.map((c, i) => {
-    const etat = c.termine ? "fait" : i === ici ? "ici" : "";
+    const verrou = choisi && i > ici;
+    const etat = verrou ? "verrou" : c.termine ? "fait" : i === ici ? "ici" : "";
     const n = c.notions ? c.notions.length : 0;
     const info = c.termine ? "Terminé" : i === ici ? (c.notions[Math.min(c.courant, n - 1)] ? "En ce moment : " + c.notions[Math.min(c.courant, n - 1)].titre : "En cours") : n + " notion" + (n > 1 ? "s" : "");
+    if (verrou) return `<div class="arret verrou" aria-disabled="true" title="Ce chapitre n'est pas encore ouvert">
+      <span class="rail"><span class="point">${CADENAS}</span></span>
+      <span class="nom">${esc(c.titre)}</span>
+      <span class="etat">${i === ici + 1 ? "Prochain arrêt" : "À venir"}</span>
+    </div>`;
     return `<a class="arret ${etat}" href="frise.html?classe=${classe}&chap=${encodeURIComponent(c.id)}">
       <span class="rail">${etat === "ici" ? '<span class="badge">On est ici</span>' : ""}<span class="point"></span></span>
       <span class="nom">${esc(c.titre)}</span>
