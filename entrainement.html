@@ -38,6 +38,7 @@
   .hint { font-size:.85rem; color:var(--mute); margin-top:6px; }
   .verdict { font-weight:700; margin-top:8px; }
   .verdict.ok { color:var(--ok); } .verdict.ko { color:var(--err); }
+  .explication { margin-top:6px; padding:8px 12px; border-left:4px solid var(--ok); border-radius:6px; background:color-mix(in srgb, var(--ok) 8%, transparent); line-height:1.5; }
   #score { font-size:1.3rem; font-weight:700; text-align:center; padding:16px; }
   .row { display:flex; gap:10px; flex-wrap:wrap; }
   .msg { padding:14px; border-radius:8px; border:1px solid var(--err); color:var(--err); }
@@ -175,6 +176,12 @@ $("check").addEventListener("click", async () => {
       const v = document.createElement("div"); v.className = "verdict " + (q.ok ? "ok" : "ko");
       v.textContent = q.ok ? "✓ Juste" : (mine.length ? "✗ Faux : la bonne réponse est en vert" : "✗ Pas de réponse : la bonne réponse est en vert");
       card.append(v);
+      if (!q.ok && q.explication) {
+        const x = document.createElement("div"); x.className = "explication";
+        const t = document.createElement("b"); t.textContent = "Pourquoi ? ";
+        x.append(t, document.createTextNode(q.explication));
+        card.append(x); math(x);
+      }
     }
     const s = $("score"); s.hidden = false;
     s.textContent = `Score : ${d.score} / ${d.max}  —  ${String(d.note20).replace(".", ",")} / 20`;
