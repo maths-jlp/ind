@@ -59,11 +59,12 @@ a{color:inherit;text-decoration:none}
   .actions{order:3}
   .prof{order:4;align-self:flex-start}
 }
-/* Station Châtelet : au survol, bulle qui propose le podcast */
-.chatelet{cursor:pointer}
-.chatelet .bulle{opacity:0;transition:opacity .15s;pointer-events:none}
-.chatelet:hover .bulle,.chatelet:focus-visible .bulle{opacity:1}
-.chatelet:hover .st,.chatelet:focus-visible .st{fill:#fff3c4}
+/* Stations Châtelet et Hypatie : au survol, bulle qui propose le podcast */
+.podcast{cursor:pointer}
+.podcast .bulle{opacity:0;transition:opacity .15s;pointer-events:none}
+.podcast:hover .bulle,.podcast:focus-visible .bulle{opacity:1}
+.podcast:hover .st,.podcast:focus-visible .st{fill:#fff3c4}
+.podcast:hover .nom-st,.podcast:focus-visible .nom-st{fill:var(--encre)}
 </style>
 </head>
 <body>
@@ -82,12 +83,12 @@ a{color:inherit;text-decoration:none}
     </g>
     <g fill="#fff" stroke="var(--gris)" stroke-width="4">
       <circle cx="330" cy="260" r="7"/><circle cx="620" cy="120" r="7"/><circle cx="980" cy="56" r="7"/>
-      <circle cx="1300" cy="420" r="7"/><circle cx="1420" cy="380" r="7"/><circle cx="600" cy="720" r="7"/>
+      <circle cx="1300" cy="420" r="7"/><circle cx="1420" cy="380" r="7"/>
       <circle cx="1200" cy="770" r="7"/><circle cx="220" cy="590" r="7"/><circle cx="1260" cy="760" r="7"/>
     </g>
     <g fill="var(--gris-texte)" font-family="Overpass, sans-serif" font-size="19" font-weight="700">
       <text x="300" y="242">Thalès</text><text x="590" y="102">Euclide</text><text x="996" y="62">Fermat</text>
-      <text x="1270" y="404">Descartes</text><text x="1436" y="386">Gauss</text><text x="500" y="705">Hypatie</text>
+      <text x="1270" y="404">Descartes</text><text x="1436" y="386">Gauss</text>
       <text x="1180" y="802">Euler</text><text x="170" y="620">Pascal</text><text x="1276" y="766">Noether</text>
     </g>
 
@@ -116,8 +117,20 @@ a{color:inherit;text-decoration:none}
       <circle cx="1430" cy="100" r="30" fill="var(--lt)"/><text x="1430" y="110" text-anchor="middle" font-family="Overpass, sans-serif" font-size="30" font-weight="900" fill="#fff">T</text>
     </a>
 
+    <!-- Station Hypatie : lien vers le podcast, comme Châtelet -->
+    <a class="podcast" href="https://www.radiofrance.fr/franceinter/podcasts/la-saga-des-maths/la-saga-des-maths-8734874" target="_blank" rel="noopener" aria-label="Station Hypatie : écouter « La saga des maths » sur Hypatie (France Inter)">
+      <circle class="st" cx="600" cy="720" r="7" fill="#fff" stroke="var(--gris)" stroke-width="4"/>
+      <text class="nom-st" x="500" y="705" font-family="Overpass, sans-serif" font-size="19" font-weight="700" fill="var(--gris-texte)">Hypatie</text>
+      <g class="bulle" aria-hidden="true">
+        <rect x="430" y="606" width="352" height="66" rx="12" fill="var(--encre)"/>
+        <path d="M528 672 l12 12 l12 -12z" fill="var(--encre)"/>
+        <text x="450" y="634" font-family="Overpass, sans-serif" font-size="19" font-weight="800" fill="#fff">🎧 Écouter « La saga des maths »</text>
+        <text x="450" y="658" font-family="Overpass, sans-serif" font-size="15" font-weight="600" fill="#cfd6e0">Hypatie d'Alexandrie · France Inter ↗</text>
+      </g>
+    </a>
+
     <!-- Station de correspondance -->
-    <a class="chatelet" href="https://www.radiofrance.fr/franceinter/podcasts/la-saga-des-maths/la-saga-des-maths-5287186" target="_blank" rel="noopener" aria-label="Station Châtelet : écouter « La saga des maths » sur Émilie du Châtelet (France Inter)">
+    <a class="chatelet podcast" href="https://www.radiofrance.fr/franceinter/podcasts/la-saga-des-maths/la-saga-des-maths-5287186" target="_blank" rel="noopener" aria-label="Station Châtelet : écouter « La saga des maths » sur Émilie du Châtelet (France Inter)">
       <rect class="st" x="732" y="418" width="116" height="64" rx="32" fill="#fff" stroke="var(--encre)" stroke-width="6"/>
       <text x="860" y="503" font-family="Overpass, sans-serif" font-size="25" font-weight="800" fill="var(--encre)" stroke="#fff" stroke-width="7" stroke-linejoin="round" paint-order="stroke">Châtelet<tspan font-size="19" font-weight="600" font-style="italic" dx="6">(Émilie du)</tspan></text>
       <text x="860" y="530" font-family="Overpass, sans-serif" font-size="19" font-weight="700" fill="#8a8f98" text-decoration="line-through">Les Halles</text>
