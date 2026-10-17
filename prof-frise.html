@@ -367,6 +367,26 @@ async function genererTousQcm(c, bouton){
   toast(ok + " QCM créé" + (ok > 1 ? "s" : "") + (ok < aFaire.length ? " — arrêt sur une erreur (plafond du jour ?)" : "") + ". Ils s'ouvriront aux élèves au fil de la ligne.");
   renderPanneaux();
 }
+// Explications automatiques : à l'ouverture de la page, chaque QCM « Teste-toi ! » qui n'a pas encore
+// ses explications les reçoit (une seule fois par QCM, en arrière-plan, sans rien demander).
+let explEnCours = false;
+async function completerExplications(){
+  if (explEnCours) return; explEnCours = true;
+  try {
+    for (const c of Object.values(chapitres)){
+      const aFaire = c.notions.filter(n => n.qcm && !n.qcmExpl);
+      if (!aFaire.length) continue;
+      let change = false;
+      for (const n of aFaire){
+        try {
+          const r = await api("POST", "/api/admin/quiz/" + encodeURIComponent(n.qcm) + "/explications");
+          if (!r.manquantes){ n.qcmExpl = true; change = true; }
+        } catch(e){ if (e.code === "auth") return; /* réessayé à la prochaine ouverture */ }
+      }
+      if (change) await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(c.id), JSON.parse(JSON.stringify(c))).catch(() => {});
+    }
+  } finally { explEnCours = false; }
+}
 async function genererQcm(c, n, bouton, silencieux){
   const tex = texBrut[c.lien];
   if (!tex){ toast("Cours illisible"); return; }
@@ -378,7 +398,7 @@ async function genererQcm(c, n, bouton, silencieux){
   try {
     const g = await api("POST", "/api/admin/generate", {tex: partie, n: 5, niveau, titre: c.titre + " — " + n.titre, difficulte: "moyen"});
     await api("PUT", "/api/admin/quiz/" + encodeURIComponent(id), g.quiz);
-    n.qcm = id; n.qcmPublie = false;
+    n.qcm = id; n.qcmPublie = false; n.qcmExpl = g.quiz.questions.every(q => q.explication);
     await syncQcm(c);
     sauver(c, 0); renderPanneaux(); renderHaut();
     if (!silencieux) toast("QCM créé pour « " + n.titre + " »" + (n.qcmPublie ? " : visible sous la station" : " : il sera visible quand la ligne atteindra cette station"));
@@ -466,6 +486,7 @@ async function init(){
     const d = await api("GET", "/api/admin/frise");
     chapitres = {}; (d.chapitres || []).forEach(c => chapitres[c.id] = c);
     $("#login").hidden = true; charge = true; trier(); render();
+    completerExplications();
   } catch(e){ if (e.code !== "auth") toast("Chargement impossible : " + (e.message || "réseau")); }
 }
 function deconnecter(msg){
