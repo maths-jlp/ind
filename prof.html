@@ -187,9 +187,34 @@
     .card-title { font-size: 13px; }
     .tab { padding: 6px 12px; font-size: 14px; }
   }
+
+  /* Verrou : rien n'est affiché tant que le mot de passe n'est pas vérifié par le Worker */
+  body.verrou .container { display: none; }
+  #verrou { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; padding: 16px; background: var(--bg); z-index: 50; }
+  body.verrou #verrou { display: flex; }
+  #verrou form { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 24px 22px; width: min(380px, 100%); display: flex; flex-direction: column; gap: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.06); }
+  #verrou h2 { font-size: 24px; }
+  #verrou input { font: inherit; font-size: 17px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
+  #verrou button { font: inherit; font-size: 17px; font-weight: 700; padding: 8px 10px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; }
+  #verrou .msg { min-height: 1.2em; color: var(--accent); font-size: 15px; }
+  #verrou a { color: var(--muted); font-size: 15px; }
+  .deconnexion { position: fixed; top: 10px; right: 12px; font: inherit; font-size: 14px; background: none; border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; color: var(--muted); cursor: pointer; }
+  body.verrou .deconnexion { display: none; }
 </style>
 </head>
-<body>
+<body class="verrou">
+
+<div id="verrou">
+  <form id="form-verrou" autocomplete="off">
+    <h2>Espace prof</h2>
+    <input id="mdp" type="password" placeholder="Mot de passe" aria-label="Mot de passe" required>
+    <button type="submit">Entrer</button>
+    <div class="msg" id="verrou-msg"></div>
+    <a href="index.html">◂ Retour au plan des lignes</a>
+  </form>
+</div>
+<button class="deconnexion" id="deconnexion" type="button">Se déconnecter</button>
+
 
 <div class="container">
 
@@ -418,6 +443,35 @@
     evt.target.classList.add('active');
     document.getElementById('niveau-' + niveau).classList.add('active');
   }
+</script>
+
+<script>
+  // Connexion unique : le mot de passe (ADMIN_TOKEN du Worker) est vérifié puis gardé le temps de l'onglet
+  // (sessionStorage "qcm-token") ; prof-eval et prof-frise, ouverts dans le même onglet, le reprennent sans rien redemander.
+  (() => {
+    const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
+    const msg = t => { document.getElementById("verrou-msg").textContent = t || ""; };
+    const lire = () => { try { return sessionStorage.getItem("qcm-token") || ""; } catch (e) { return ""; } };
+    async function verifier(tok, silencieux) {
+      if (!tok) return;
+      if (!silencieux) msg("Vérification…");
+      try {
+        const r = await fetch(API + "/api/admin/roster", { headers: { Authorization: "Bearer " + tok } });
+        if (r.status === 401) { try { sessionStorage.removeItem("qcm-token"); } catch (e) {} msg(silencieux ? "" : "Mot de passe incorrect."); return; }
+        if (!r.ok) throw 0;
+        try { sessionStorage.setItem("qcm-token", tok); } catch (e) {}
+        document.body.classList.remove("verrou"); msg("");
+      } catch (e) { msg("Connexion au serveur impossible, réessayez."); }
+    }
+    document.getElementById("form-verrou").addEventListener("submit", ev => {
+      ev.preventDefault(); verifier(document.getElementById("mdp").value.trim());
+    });
+    document.getElementById("deconnexion").addEventListener("click", () => {
+      try { sessionStorage.removeItem("qcm-token"); } catch (e) {}
+      document.getElementById("mdp").value = ""; document.body.classList.add("verrou");
+    });
+    if (lire()) verifier(lire(), true); else document.getElementById("mdp").focus();
+  })();
 </script>
 
 </body>

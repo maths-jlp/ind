@@ -229,7 +229,8 @@ function renderList() {
 }
 async function loadList() {
   try {
-    quizList = (await adminApi("/quizzes")).quizzes || [];
+    // Les petits QCM « Teste-toi ! » des stations de la frise (identifiants f-…) sont gérés dans prof-frise : on ne les liste pas ici.
+    quizList = ((await adminApi("/quizzes")).quizzes || []).filter((q) => !String(q.id).startsWith("f-"));
     $("listInfo").textContent = quizList.length ? `(${quizList.length})` : "(aucun QCM enregistré)";
   } catch (e) { quizList = []; $("listInfo").textContent = "(" + e.message + ")"; }
   renderList();
@@ -410,6 +411,8 @@ $("btnGenDiscard").addEventListener("click", () => {
 
 updateLink();
 if ($("token").value) { loadRoster(); loadList(); if (qid()) refresh(); }
+// Connexion déjà faite sur prof.html (même onglet) : chargement direct, sans redemander le mot de passe.
+if ($("token").value) $("btnConnect").click();
 </script>
 </body>
 </html>
