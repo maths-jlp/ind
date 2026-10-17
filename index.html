@@ -65,6 +65,7 @@ a{color:inherit;text-decoration:none}
 .podcast:hover .bulle,.podcast:focus-visible .bulle{opacity:1}
 .podcast:hover .st,.podcast:focus-visible .st{fill:#fff3c4}
 .podcast:hover .nom-st,.podcast:focus-visible .nom-st{fill:var(--encre)}
+.podcast:hover .casque circle,.podcast:focus-visible .casque circle{fill:var(--vert)}
 </style>
 </head>
 <body>
@@ -119,8 +120,9 @@ a{color:inherit;text-decoration:none}
 
     <!-- Station Hypatie : lien vers le podcast, comme Châtelet -->
     <a class="podcast" href="https://www.radiofrance.fr/franceinter/podcasts/la-saga-des-maths/la-saga-des-maths-8734874" target="_blank" rel="noopener" aria-label="Station Hypatie : écouter « La saga des maths » sur Hypatie (France Inter)">
-      <circle class="st" cx="600" cy="720" r="7" fill="#fff" stroke="var(--gris)" stroke-width="4"/>
-      <text class="nom-st" x="500" y="705" font-family="Overpass, sans-serif" font-size="19" font-weight="700" fill="var(--gris-texte)">Hypatie</text>
+      <circle class="st" cx="600" cy="720" r="9" fill="#fff" stroke="var(--encre)" stroke-width="4"/>
+      <g class="casque" transform="translate(478 698)" aria-hidden="true"><circle r="15" fill="var(--encre)" stroke="#fff" stroke-width="3"/><g fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M-7 4v-3a7 7 0 0 1 14 0v3"/></g><rect x="-9" y="2" width="5" height="7" rx="1.5" fill="#fff"/><rect x="4" y="2" width="5" height="7" rx="1.5" fill="#fff"/></g>
+      <text class="nom-st" x="499" y="706" font-family="Overpass, sans-serif" font-size="22" font-weight="800" fill="var(--encre)" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke">Hypatie</text>
       <g class="bulle" aria-hidden="true">
         <rect x="430" y="606" width="352" height="66" rx="12" fill="var(--encre)"/>
         <path d="M528 672 l12 12 l12 -12z" fill="var(--encre)"/>
@@ -132,13 +134,14 @@ a{color:inherit;text-decoration:none}
     <!-- Station de correspondance -->
     <a class="chatelet podcast" href="https://www.radiofrance.fr/franceinter/podcasts/la-saga-des-maths/la-saga-des-maths-5287186" target="_blank" rel="noopener" aria-label="Station Châtelet : écouter « La saga des maths » sur Émilie du Châtelet (France Inter)">
       <rect class="st" x="732" y="418" width="116" height="64" rx="32" fill="#fff" stroke="var(--encre)" stroke-width="6"/>
-      <text x="860" y="503" font-family="Overpass, sans-serif" font-size="25" font-weight="800" fill="var(--encre)" stroke="#fff" stroke-width="7" stroke-linejoin="round" paint-order="stroke">Châtelet<tspan font-size="19" font-weight="600" font-style="italic" dx="6">(Émilie du)</tspan></text>
-      <text x="860" y="530" font-family="Overpass, sans-serif" font-size="19" font-weight="700" fill="#8a8f98" text-decoration="line-through">Les Halles</text>
+      <g class="casque" transform="translate(876 495)" aria-hidden="true"><circle r="15" fill="var(--encre)" stroke="#fff" stroke-width="3"/><g fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M-7 4v-3a7 7 0 0 1 14 0v3"/></g><rect x="-9" y="2" width="5" height="7" rx="1.5" fill="#fff"/><rect x="4" y="2" width="5" height="7" rx="1.5" fill="#fff"/></g>
+      <text x="898" y="503" font-family="Overpass, sans-serif" font-size="25" font-weight="800" fill="var(--encre)" stroke="#fff" stroke-width="7" stroke-linejoin="round" paint-order="stroke">Châtelet<tspan font-size="19" font-weight="600" font-style="italic" dx="6">(Émilie du)</tspan></text>
+      <text x="898" y="530" font-family="Overpass, sans-serif" font-size="19" font-weight="700" fill="#8a8f98" text-decoration="line-through">Les Halles</text>
       <g class="bulle" aria-hidden="true">
-        <rect x="852" y="548" width="352" height="66" rx="12" fill="var(--encre)"/>
-        <path d="M880 548 l12 -12 l12 12z" fill="var(--encre)"/>
-        <text x="872" y="576" font-family="Overpass, sans-serif" font-size="19" font-weight="800" fill="#fff">🎧 Écouter « La saga des maths »</text>
-        <text x="872" y="600" font-family="Overpass, sans-serif" font-size="15" font-weight="600" fill="#cfd6e0">Émilie du Châtelet · France Inter ↗</text>
+        <rect x="868" y="548" width="352" height="66" rx="12" fill="var(--encre)"/>
+        <path d="M896 548 l12 -12 l12 12z" fill="var(--encre)"/>
+        <text x="888" y="576" font-family="Overpass, sans-serif" font-size="19" font-weight="800" fill="#fff">🎧 Écouter « La saga des maths »</text>
+        <text x="888" y="600" font-family="Overpass, sans-serif" font-size="15" font-weight="600" fill="#cfd6e0">Émilie du Châtelet · France Inter ↗</text>
       </g>
     </a>
   </svg>
