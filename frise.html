@@ -76,6 +76,15 @@ button.exo:hover{border-color:var(--line)}
 .exo.qcm-chip{--c:var(--ratp);background:var(--ratp);color:#fff;border-color:var(--ratp)}
 .exo.qcm-chip .ref{color:#fff;font-family:var(--f-display);font-weight:800}
 .exo.qcm-chip:hover{background:#0f7a5d}
+/* Terminus « Entraînement » */
+.terminus .arret{width:26px;height:26px;border-radius:7px;border:5px solid var(--fg);background:var(--surface)}
+.terminus.passe .arret{border-color:var(--line)}
+.terminus .nom{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.exo.terminus-btn{background:var(--fg);border-color:var(--fg);color:#fff;padding:3px 10px}
+.exo.terminus-btn .ref{font-family:var(--f-display);font-weight:800;color:#fff}
+button.exo.terminus-btn:hover{background:var(--line);border-color:var(--line)}
+.exo.terminus-btn.ferme{background:var(--surface-2);border-color:var(--rule);color:var(--muted)}
+.exo.terminus-btn.ferme .ref{color:var(--muted)}
 /* Boîte « Exercices » dépliable sous chaque station */
 .ligne-box.deplie{max-height:none}
 .exos-box{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%}
@@ -234,7 +243,18 @@ function render(){
       }).join("")}</div>
       </div>
     </div>`;
-  }).join("");
+  }).join("") + (c.terminus ? (() => {
+    // Terminus « Entraînement » : feuille de 3 exercices sur tout le chapitre, ouverte quand la ligne arrive au bout.
+    const ouvert = c.termine || cur >= c.notions.length - 1;
+    return `<div class="station terminus ${c.termine ? "passe" : "futur"}">
+      <div class="rail"><span class="arret"></span></div>
+      <div class="nom">Terminus</div>
+      ${ouvert ? `<button class="exo terminus-btn" type="button" id="ouvrir-terminus" title="3 exercices sur tout le chapitre"><span class="ref">Entraînement</span></button>`
+               : `<span class="exo terminus-btn ferme" title="S'ouvre quand la ligne arrive au terminus"><span class="ref">Entraînement</span></span>`}
+    </div>`;
+  })() : "");
+  const bt = document.getElementById("ouvrir-terminus");
+  if (bt) bt.onclick = () => ouvrir({ref:"Entraînement — " + c.titre, fichier:c.terminus});
   const majDeplie = () => $(".ligne-box").classList.toggle("deplie", !!$("#ligne .exos-box.ouvert"));
   $("#ligne").querySelectorAll("[data-tog]").forEach(b => b.onclick = () => {
     const box = b.parentElement, ouvert = box.classList.toggle("ouvert");

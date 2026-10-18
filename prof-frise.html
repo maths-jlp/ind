@@ -367,6 +367,26 @@ async function genererTousQcm(c, bouton){
   toast(ok + " QCM créé" + (ok > 1 ? "s" : "") + (ok < aFaire.length ? " — arrêt sur une erreur (plafond du jour ?)" : "") + ". Ils s'ouvriront aux élèves au fil de la ligne.");
   renderPanneaux();
 }
+// Terminus « Entraînement » automatique : chaque ligne qui a un cours .tex reçoit, une fois, sa feuille de
+// 3 exercices de bon niveau sur tout le chapitre (générée par le Worker), affichée au bout de la ligne.
+let terminusEnCours = false; const terminusEchecs = new Set();
+async function genererTerminus(c){
+  const r = await api("POST", "/api/admin/frise/terminus/" + encodeURIComponent(c.id));
+  Object.assign(c, {terminus:r.nom, terminusCorrige:r.corrige, terminusPdf:!!r.pdf, terminusPdfCorrige:!!r.pdfCorrige,
+    terminusErreur:r.erreur || "", terminusVersion:2, terminusMaj:Date.now()});
+  sauver(c, 0); renderPanneaux();
+}
+async function completerTerminus(){
+  if (terminusEnCours) return; terminusEnCours = true;
+  try {
+    for (const c of Object.values(chapitres)){
+      if ((c.terminusVersion || 0) >= 2 || !coursTex(c) || terminusEchecs.has(c.id) || dirty.has(c.id)) continue;
+      try { await genererTerminus(c); }
+      catch(e){ if (e.code === "auth") return; terminusEchecs.add(c.id); /* réessayé à la prochaine ouverture */ }
+    }
+  } finally { terminusEnCours = false; }
+}
+
 // Explications automatiques : à l'ouverture de la page, chaque QCM « Teste-toi ! » qui n'a pas encore
 // ses explications les reçoit (une seule fois par QCM, en arrière-plan, sans rien demander).
 let explEnCours = false;
@@ -456,6 +476,7 @@ function sauver(ch, delai=500){
   dirty.add(ch.id);
   clearTimeout(timers[ch.id]);
   timers[ch.id] = setTimeout(() => { timers[ch.id] = null; ecrire(ch.id); }, delai);
+  if ((ch.terminusVersion || 0) < 2 && coursTex(ch)) setTimeout(completerTerminus, delai + 4000);   // nouvelle ligne : sa feuille Entraînement
 }
 let file = Promise.resolve();
 function ecrire(id){
@@ -486,7 +507,7 @@ async function init(){
     const d = await api("GET", "/api/admin/frise");
     chapitres = {}; (d.chapitres || []).forEach(c => chapitres[c.id] = c);
     $("#login").hidden = true; charge = true; trier(); render();
-    completerExplications();
+    completerExplications().then(completerTerminus);
   } catch(e){ if (e.code !== "auth") toast("Chargement impossible : " + (e.message || "réseau")); }
 }
 function deconnecter(msg){
@@ -706,6 +727,11 @@ function renderPanneaux(){
             <button class="btn" type="button" data-nqcm="${n.id}" ${Number.isInteger(n.ancre) ? "" : "disabled title=\"Choisissez d'abord la partie du cours\""}>${n.qcm ? "Refaire le QCM" : "Générer un QCM"}</button>
             ${n.qcm ? (n.qcmPublie ? `<a class="note" href="entrainement.html?q=${encodeURIComponent(n.qcm)}" target="_blank" rel="noopener">QCM ouvert ✓ ↗</a>` : `<span class="note">QCM prêt</span>`) : ""}</span>` : ""}</li>`).join("")}
         </ul>
+        <div class="ligne-form"><span class="note"><b>Terminus · Entraînement</b> (3 exercices sur tout le chapitre) :
+          ${(c.terminusVersion || 0) >= 2
+            ? `<a href="${esc(urlFichier(c.terminusPdf ? c.terminus.replace(/\.tex$/, ".pdf") : c.terminus))}" target="_blank" rel="noopener">feuille${c.terminusPdf ? " PDF" : ""} ↗</a> · <a href="#" id="terminus-corrige">corrigé${c.terminusPdfCorrige ? " PDF" : ""} ↗</a>${c.terminusPdf && c.terminusPdfCorrige ? "" : ` · <b>PDF non compilé</b> (les élèves voient la feuille sans figures)${c.terminusErreur ? " : " + esc(c.terminusErreur.slice(0, 120)) : ""}`}`
+            : coursTex(c) ? (terminusEchecs.has(c.id) ? "échec, réessayé à la prochaine ouverture" : "en préparation (2 à 4 min : rédaction puis compilation)…") : "il faut un cours .tex"}</span>
+          ${(c.terminusVersion || 0) >= 2 ? `<button class="btn" type="button" id="terminus-refaire">Refaire la feuille</button>` : ""}</div>
         <form class="ligne-form" id="form-notion"><input type="text" id="nn-titre" placeholder="Nouvelle station"><button class="btn" type="submit">Ajouter</button></form>
         <span class="note" id="ndel-msg"></span>
       </div>
@@ -778,6 +804,23 @@ function renderPanneaux(){
   const selCours = $("#ch-cours"); if (selCours) selCours.onchange = ev => { c.cours = ev.target.value; sauver(c,0); renderHaut(); toast(ev.target.selectedOptions[0].textContent); };
 
   const qt = $("#qcm-tous"); if (qt) qt.onclick = () => genererTousQcm(c, qt);
+  const tco = $("#terminus-corrige"); if (tco) tco.onclick = async ev => {
+    // Le corrigé n'est servi qu'au prof : on le récupère avec le mot de passe puis on l'ouvre.
+    ev.preventDefault();
+    const nom = c.terminusPdfCorrige ? c.terminusCorrige.replace(/\.tex$/, ".pdf") : c.terminusCorrige;
+    const w = window.open("", "_blank");
+    try {
+      const r = await fetch(API + "/api/admin/frise-file/" + encodeURIComponent(nom), {headers:{Authorization:"Bearer " + TOKEN}});
+      if (!r.ok) throw 0;
+      const u = URL.createObjectURL(await r.blob());
+      if (w) w.location = u; else location.href = u;
+    } catch(e){ if (w) w.close(); toast("Corrigé indisponible"); }
+  };
+  const tr = $("#terminus-refaire"); if (tr) tr.onclick = async () => {
+    tr.disabled = true; tr.textContent = "Génération… (2 à 4 min)";
+    try { await genererTerminus(c); toast("Nouvelle feuille Entraînement prête"); }
+    catch(e){ if (e.code !== "auth") toast("Feuille impossible : " + (e.message || "réseau")); tr.disabled = false; tr.textContent = "Refaire la feuille"; }
+  };
   p.querySelectorAll("[data-nqcm]").forEach(b => b.onclick = () => {
     const n = c.notions.find(n => n.id === b.dataset.nqcm); if (n) genererQcm(c, n, b);
   });
