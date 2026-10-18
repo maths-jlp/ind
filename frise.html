@@ -83,6 +83,11 @@ button.exo:hover{border-color:var(--line)}
 .exo.terminus-btn{background:var(--fg);border-color:var(--fg);color:#fff;padding:3px 10px}
 .exo.terminus-btn .ref{font-family:var(--f-display);font-weight:800;color:#fff}
 button.exo.terminus-btn:hover{background:var(--line);border-color:var(--line)}
+.terminus .exo.terminus-btn{min-width:118px;justify-content:center}
+.exo.terminus-btn.correction{background:var(--surface);color:var(--fg);border-color:var(--fg)}
+.exo.terminus-btn.correction .ref{color:var(--fg)}
+button.exo.terminus-btn.correction:hover{background:var(--line);border-color:var(--line)}
+button.exo.terminus-btn.correction:hover .ref{color:#fff}
 .exo.terminus-btn.ferme{background:var(--surface-2);border-color:var(--rule);color:var(--muted)}
 .exo.terminus-btn.ferme .ref{color:var(--muted)}
 /* Boîte « Exercices » dépliable sous chaque station */
@@ -251,10 +256,14 @@ function render(){
       <div class="nom">Terminus</div>
       ${ouvert ? `<button class="exo terminus-btn" type="button" id="ouvrir-terminus" title="3 exercices sur tout le chapitre"><span class="ref">Entraînement</span></button>`
                : `<span class="exo terminus-btn ferme" title="S'ouvre quand la ligne arrive au terminus"><span class="ref">Entraînement</span></span>`}
+      ${c.terminusCorrige ? (ouvert ? `<button class="exo terminus-btn correction" type="button" id="ouvrir-correction" title="Corrigé détaillé des 3 exercices"><span class="ref">Correction</span></button>`
+               : `<span class="exo terminus-btn correction ferme" title="S'ouvre quand la ligne arrive au terminus"><span class="ref">Correction</span></span>`) : ""}
     </div>`;
   })() : "");
   const bt = document.getElementById("ouvrir-terminus");
   if (bt) bt.onclick = () => ouvrir({ref:"Entraînement — " + c.titre, fichier:c.terminus});
+  const bc = document.getElementById("ouvrir-correction");
+  if (bc) bc.onclick = () => ouvrir({ref:"Correction — " + c.titre, fichier:c.terminusCorrige});
   const majDeplie = () => $(".ligne-box").classList.toggle("deplie", !!$("#ligne .exos-box.ouvert"));
   $("#ligne").querySelectorAll("[data-tog]").forEach(b => b.onclick = () => {
     const box = b.parentElement, ouvert = box.classList.toggle("ouvert");
