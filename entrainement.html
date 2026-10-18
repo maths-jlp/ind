@@ -68,6 +68,10 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <script>
+// Macros LaTeX courantes (les QCM générés peuvent utiliser \vect, \R…) : KaTeX ne les connaît pas d'office.
+const KATEX_MACROS = { "\\vect":"\\overrightarrow{#1}", "\\Vect":"\\overrightarrow{#1}", "\\vv":"\\overrightarrow{#1}",
+  "\\norme":"\\left\\lVert #1\\right\\rVert", "\\abs":"\\left|#1\\right|", "\\R":"\\mathbb{R}", "\\N":"\\mathbb{N}",
+  "\\Z":"\\mathbb{Z}", "\\Q":"\\mathbb{Q}", "\\C":"\\mathbb{C}", "\\D":"\\mathbb{D}", "\\e":"\\mathrm{e}", "\\ds":"\\displaystyle" };
 // ====== URL du Worker ======
 const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
 // ===========================
@@ -79,7 +83,7 @@ function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0;
 function setStatus(t, err) { const s = $("status"); s.textContent = t; s.className = err ? "msg" : "mute"; s.hidden = !t; }
 function math(el) {
   if (!window.renderMathInElement) { window.addEventListener("load", () => math(el), { once: true }); return; }   // KaTeX pas encore chargé
-  if (window.renderMathInElement) renderMathInElement(el, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }, { left: "\\(", right: "\\)", display: false }, { left: "\\[", right: "\\]", display: true }] });
+  if (window.renderMathInElement) renderMathInElement(el, { macros: Object.assign({}, KATEX_MACROS), throwOnError: false, delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }, { left: "\\(", right: "\\)", display: false }, { left: "\\[", right: "\\]", display: true }] });
 }
 function makeImg(src, cls) {
   const img = document.createElement("img"); img.src = src; img.alt = ""; img.className = cls; img.draggable = false;
