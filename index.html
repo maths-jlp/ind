@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>jlp Maths — plan du réseau</title>
+<title>Ma Ligne Maths — plan du réseau</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@500;600;700;800;900&display=swap">
 <style>
 /* Plan du réseau : un fond de plan clair, trois lignes de classe qui se croisent à la station « Châtelet (Émilie du) ». */
@@ -29,6 +29,13 @@ a{color:inherit;text-decoration:none}
 /* Cartouche titre */
 .cartouche{position:absolute;top:calc(20px + env(safe-area-inset-top,0px));left:max(20px,env(safe-area-inset-left,0px));background:var(--encre);color:#fff;border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 20px rgba(14,42,71,.18)}
 .cartouche .m{width:46px;height:46px;border-radius:50%;border:4px solid #fff;display:grid;place-items:center;font-weight:900;font-size:22px}
+.cartouche button.m{background:transparent;color:#fff;font:inherit;font-weight:900;font-size:22px;cursor:pointer;padding:0;transition:background .15s,color .15s}
+.cartouche button.m:hover,.cartouche button.m[aria-expanded="true"]{background:#fff;color:var(--encre)}
+.cartouche button.m:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.contact{position:absolute;top:calc(100% + 8px);left:0;background:#fff;color:var(--encre);border-radius:10px;padding:10px 14px;box-shadow:0 6px 20px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:2px;z-index:5;white-space:nowrap}
+.contact[hidden]{display:none}
+.cartouche .contact .contact-titre{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.6}
+.contact a{color:var(--encre);font-size:17px;font-weight:800}
 .cartouche b{display:block;font-size:24px;font-weight:800;line-height:1}
 .cartouche span{font-size:13px;font-weight:600;opacity:.75}
 
@@ -54,7 +61,7 @@ a{color:inherit;text-decoration:none}
   .plan{height:auto;min-height:0;display:flex;flex-direction:column;gap:14px;padding:16px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
   .plan svg.carte{position:relative;height:auto;aspect-ratio:16/10;order:1}
   .cartouche,.legende,.actions,.prof{position:static;box-shadow:none}
-  .cartouche{order:0}
+  .cartouche{order:0;position:relative}
   .legende{order:2;min-width:0}
   .actions{order:3}
   .prof{order:4;align-self:flex-start}
@@ -193,8 +200,12 @@ a{color:inherit;text-decoration:none}
   </svg>
 
   <div class="cartouche">
-    <span class="m" aria-hidden="true">M</span>
-    <div><b>jlp Maths</b><span>Plan du réseau · choisis ta ligne</span></div>
+    <button class="m" id="btn-contact" type="button" aria-expanded="false" aria-controls="contact" title="Contact">M</button>
+    <div><b>Ma Ligne Maths</b><span>Plan du réseau · choisis ta ligne</span></div>
+    <div class="contact" id="contact" hidden>
+      <span class="contact-titre">Contact</span>
+      <a href="mailto:maths314@gmail.com">maths314@gmail.com</a>
+    </div>
   </div>
 
   <a class="prof" href="prof.html">Espace prof</a>
@@ -224,6 +235,16 @@ document.querySelectorAll("[data-encours]").forEach(el => {
     if (ch) el.textContent = "En ce moment : " + ch.titre;
   }).catch(() => {});
 });
+</script>
+<script>
+  // Pastille « M » : affiche / masque le contact
+  (() => {
+    const b = document.getElementById("btn-contact"), c = document.getElementById("contact");
+    const fermer = () => { c.hidden = true; b.setAttribute("aria-expanded", "false"); };
+    b.addEventListener("click", ev => { ev.stopPropagation(); c.hidden = !c.hidden; b.setAttribute("aria-expanded", String(!c.hidden)); });
+    document.addEventListener("click", ev => { if (!c.hidden && !c.contains(ev.target)) fermer(); });
+    document.addEventListener("keydown", ev => { if (ev.key === "Escape") fermer(); });
+  })();
 </script>
 </body>
 </html>
