@@ -90,6 +90,9 @@ button.exo.terminus-btn.correction:hover{background:var(--line);border-color:var
 button.exo.terminus-btn.correction:hover .ref{color:#fff}
 .exo.terminus-btn.ferme{background:var(--surface-2);border-color:var(--rule);color:var(--muted)}
 .exo.terminus-btn.ferme .ref{color:var(--muted)}
+.terminus .exo.qcm-chip{min-width:118px;justify-content:center;padding:3px 10px}
+.exo.qcm-chip.ferme{background:var(--surface-2);border-color:var(--rule);color:var(--muted)}
+.exo.qcm-chip.ferme .ref{color:var(--muted)}
 /* Boîte « Exercices » dépliable sous chaque station */
 .ligne-box.deplie{max-height:none}
 .exos-box{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%}
@@ -248,16 +251,18 @@ function render(){
       }).join("")}</div>
       </div>
     </div>`;
-  }).join("") + (c.terminus ? (() => {
+  }).join("") + (c.terminus || c.autoQcm ? (() => {
     // Terminus « Entraînement » : feuille de 3 exercices sur tout le chapitre, ouverte quand la ligne arrive au bout.
     const ouvert = c.termine || cur >= c.notions.length - 1;
     return `<div class="station terminus ${c.termine ? "passe" : "futur"}">
       <div class="rail"><span class="arret"></span></div>
       <div class="nom">Terminus</div>
-      ${ouvert ? `<button class="exo terminus-btn" type="button" id="ouvrir-terminus" title="3 exercices sur tout le chapitre"><span class="ref">Entraînement</span></button>`
+      ${!c.terminus ? "" : ouvert ? `<button class="exo terminus-btn" type="button" id="ouvrir-terminus" title="3 exercices sur tout le chapitre"><span class="ref">Entraînement</span></button>`
                : `<span class="exo terminus-btn ferme" title="S'ouvre quand la ligne arrive au terminus"><span class="ref">Entraînement</span></span>`}
       ${c.terminusCorrige ? (ouvert ? `<button class="exo terminus-btn correction" type="button" id="ouvrir-correction" title="Corrigé détaillé des 3 exercices"><span class="ref">Correction</span></button>`
                : `<span class="exo terminus-btn correction ferme" title="S'ouvre quand la ligne arrive au terminus"><span class="ref">Correction</span></span>`) : ""}
+      ${c.autoQcm ? (ouvert && c.autoQcmPublie ? `<a class="exo qcm-chip" href="entrainement.html?q=${encodeURIComponent(c.autoQcm)}" title="Automatismes du chapitre : 5 questions flash"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span class="ref">Automatismes</span></a>`
+               : `<span class="exo qcm-chip ferme" title="S'ouvre quand la ligne arrive au terminus"><span class="ref">Automatismes</span></span>`) : ""}
     </div>`;
   })() : "");
   const bt = document.getElementById("ouvrir-terminus");

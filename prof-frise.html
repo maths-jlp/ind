@@ -321,6 +321,76 @@ const timers = {};
 const texCache = {};   // nom du .tex -> titres du cours (null si illisible)
 const texBrut = {};    // nom du .tex -> texte complet
 const NIVEAUX_QCM = {"4eme":"4ème", "1ere":"1ère spé", "terminale":"Terminale spé"};
+// Automatismes du programme de 4ème (Annexe 2, cycle 4 — rubriques « Automatismes » de la classe de quatrième).
+// Chaque ligne de 4ème reçoit au terminus un QCM « Automatismes » de 5 questions sur le thème correspondant.
+// "mots" : repérés dans le titre du chapitre puis dans ses stations (sans accents) pour choisir le thème tout seul.
+const AUTOMATISMES_4EME = [
+  {id:"relatifs", nom:"Opérations sur les nombres relatifs", mots:/relatif/, items:[
+    "Manipulation de sommes et différences de nombres relatifs.",
+    "Opposé d'un nombre, somme des opposés.",
+    "Entretien des tables de multiplication.",
+    "Multiplier et diviser par 10, 100, 1 000.",
+    "Compléter des multiplications à trou : 5 × ... = 3 ; faire le lien entre multiplication et division.",
+    "Multiplication comme addition itérée : 3 + 3 + 3 + 3 = 4 × 3."]},
+  {id:"rationnels", nom:"Nombres rationnels (fractions)", mots:/fraction|rationnel|inverse/, items:[
+    "Addition et soustraction de fractions de dénominateurs quelconques mais simples.",
+    "Comparaison de fractions.",
+    "Savoir qu'une fraction est aussi un quotient : 3/7 est le nombre qui, multiplié par 7, donne 3 (7 × 3/7 = 3).",
+    "Savoir que prendre la fraction d'un nombre revient à multiplier la fraction par ce nombre."]},
+  {id:"puissances", nom:"Puissances", mots:/puissance|exposant/, items:[
+    "Connaître et reconnaître les carrés parfaits des entiers de 0 à 12.",
+    "Multiplier et diviser par 10, 100, 1 000 ; savoir compléter 1 200 = 1,2 × …",
+    "Puissances simples : 2² = 4 ; 2³ = 8 ; 3³ = 27.",
+    "10² = 100 ; 10³ = 1 000."]},
+  {id:"racine", nom:"Racine carrée", mots:/racine/, items:[
+    "Donner les carrés des nombres entiers compris entre 0 et 12."]},
+  {id:"litteral", nom:"Calcul littéral et algébrique", mots:/litteral|algebr|equation|developp|factoris|distributiv|expression/, items:[
+    "Donner la valeur d'expressions numériques simples.",
+    "Résoudre des équations du type ax = c et x + b = c, où a, b et c sont des nombres.",
+    "Écrire 3 × x sous la forme 3x et savoir que 3x c'est 3 × x.",
+    "Connaître et utiliser : 1 × x = x ; x + x = 2x ; x × x = x² ; 3x + 2x = 5x ; 3x × 2x = 6x².",
+    "Donner le double, le triple, la moitié, le prédécesseur, le successeur, le carré d'un nombre.",
+    "Tester si un nombre vérifie une égalité."]},
+  {id:"translations", nom:"Parallélogrammes et translations", mots:/translation|parallelogramme|losange|rectangle|quadrilatere/, items:[
+    "Dire si des figures planes sont images l'une de l'autre par une symétrie axiale (dont on identifie l'axe) ou par un demi-tour (dont on identifie le centre).",
+    "Dans une configuration donnée, déterminer les images de figures, de droites, de segments, de points par une symétrie axiale ou un demi-tour.",
+    "Reconnaître un parallélogramme à l'aide de sa définition ou d'une propriété caractéristique grâce aux codages.",
+    "Reconnaître un parallélogramme particulier à partir de ses propriétés caractéristiques, notamment à partir des propriétés de ses diagonales."]},
+  {id:"transformations", nom:"Transformations", mots:/transformation|symetri|demi-tour/, items:[
+    "Construire (reconnaître) le symétrique d'un point par demi-tour."]},
+  {id:"reperage", nom:"Repérage sur une droite et dans le plan", mots:/reperage|repere|coordonnee|graduee|abscisse/, items:[
+    "Placer sur une droite graduée un point dont l'abscisse est un nombre relatif.",
+    "Repérer un nombre relatif sur une droite graduée.",
+    "Dans le plan muni d'un repère orthogonal : lire les coordonnées d'un point donné.",
+    "Dans le plan muni d'un repère orthogonal : placer un point de coordonnées données."]},
+  {id:"espace", nom:"Représentation de l'espace", mots:/espace|solide|volume|pyramide|cone|prisme|cylindre|patron|perspective/, items:[
+    "Reconnaître les solides : cube, pavé, cylindre, prisme droit.",
+    "Connaître et utiliser les formules du volume d'un cube, d'un pavé, d'un prisme, d'un cylindre.",
+    "Reconnaître la base d'un prisme donné en perspective cavalière.",
+    "Savoir calculer l'aire des figures planes usuelles : triangle, rectangle, disque."]},
+  {id:"triangles", nom:"Triangles", mots:/triangle|pythagore|milieux|circonscrit|mediatrice|hauteur|bissectrice|hypotenuse/, items:[
+    "Reconnaître des droites remarquables, y compris dans les triangles particuliers (médiatrices, médianes, hauteurs, bissectrices)."]},
+  {id:"statistiques", nom:"Statistiques", mots:/statisti|moyenne|etendue|effectif|frequence|serie/, items:[
+    "Calculer une moyenne pour un très petit nombre de valeurs.",
+    "Calculer un effectif manquant dans un tableau pour un petit nombre de valeurs.",
+    "Calculer une fréquence simple."]},
+  {id:"proportionnalite", nom:"Proportionnalité", mots:/proportion|pourcentage|ratio|quatrieme proportionnelle|grandeur|vitesse|echelle/, items:[
+    "Déterminer a % de c quand a vaut 100, 50, 25, 10, 1.",
+    "Compléter : 20 % de 120 = … ; 30 = …/100 × 1 000."]},
+];
+function sansAccents(t){ return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+// Thème deviné : d'abord le titre du chapitre, puis l'ensemble des stations.
+function devinerAuto(c){
+  for (const txt of [c.titre, (c.notions || []).map(n => n.titre).join(" ")]){
+    const t = sansAccents(txt);
+    const th = AUTOMATISMES_4EME.find(a => a.mots.test(t));
+    if (th) return th.id;
+  }
+  return "";
+}
+// Thème retenu : choix du prof s'il existe ("" = aucun), sinon thème deviné.
+function themeAuto(c){ return c.autoTheme !== undefined ? c.autoTheme : devinerAuto(c); }
+function autoOuvert(c){ return c.termine || (c.courant || 0) >= c.notions.length - 1; }
 // Texte de la partie du cours d'une station (de son titre jusqu'au titre de la station suivante dans le .tex).
 function partieDuCours(tex, c, n){
   const src = String(tex || "");
@@ -351,6 +421,15 @@ async function syncQcm(c){
       await api("POST", "/api/admin/quiz/" + encodeURIComponent(n.qcm) + "/practice", voulu ? {on: true, level: niveau} : {on: false});
       n.qcmPublie = voulu; change = true;
     } catch(e){ /* réessayé au prochain enregistrement */ }
+  }
+  if (c.autoQcm){
+    const voulu = c.publie !== false && !ferme && autoOuvert(c);
+    if (!!c.autoQcmPublie !== voulu){
+      try {
+        await api("POST", "/api/admin/quiz/" + encodeURIComponent(c.autoQcm) + "/practice", voulu ? {on: true, level: niveau} : {on: false});
+        c.autoQcmPublie = voulu; change = true;
+      } catch(e){ /* réessayé au prochain enregistrement */ }
+    }
   }
   return change;
 }
@@ -395,13 +474,19 @@ async function completerExplications(){
   try {
     for (const c of Object.values(chapitres)){
       const aFaire = c.notions.filter(n => n.qcm && !n.qcmExpl);
-      if (!aFaire.length) continue;
+      if (!aFaire.length && !(c.autoQcm && !c.autoQcmExpl)) continue;
       let change = false;
       for (const n of aFaire){
         try {
           const r = await api("POST", "/api/admin/quiz/" + encodeURIComponent(n.qcm) + "/explications");
           if (!r.manquantes){ n.qcmExpl = true; change = true; }
         } catch(e){ if (e.code === "auth") return; /* réessayé à la prochaine ouverture */ }
+      }
+      if (c.autoQcm && !c.autoQcmExpl){
+        try {
+          const r = await api("POST", "/api/admin/quiz/" + encodeURIComponent(c.autoQcm) + "/explications");
+          if (!r.manquantes){ c.autoQcmExpl = true; change = true; }
+        } catch(e){ if (e.code === "auth") return; }
       }
       if (change) await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(c.id), JSON.parse(JSON.stringify(c))).catch(() => {});
     }
@@ -428,6 +513,37 @@ async function genererQcm(c, n, bouton, silencieux){
     if (bouton){ bouton.disabled = false; bouton.textContent = "Générer un QCM"; }
     return false;
   }
+}
+// QCM « Automatismes » du terminus (4ème) : 5 questions flash sur les automatismes du programme liés au chapitre.
+// Créé tout seul pour chaque ligne de 4ème dont le thème est reconnu ; le prof peut changer le thème ou le refaire.
+let autoEnCours = false; const autoEchecs = new Set();
+async function genererAuto(c, bouton){
+  const th = AUTOMATISMES_4EME.find(a => a.id === themeAuto(c));
+  if (!th) throw new Error("aucun thème d'automatismes choisi");
+  const tex = "\\begin{document}\n\\section{Automatismes de 4ème : " + th.nom + "}\n" +
+    "Compétences fondamentales du programme de quatrième (cycle 4), à mobiliser rapidement, sans calculatrice. " +
+    "Elles s'appuient sur des contenus déjà étudiés et sont entretenues tout au long de l'année.\n" +
+    "\\begin{itemize}\n" + th.items.map(i => "\\item " + i).join("\n") + "\n\\end{itemize}\n" +
+    "Chapitre en cours : " + c.titre + ".\n\\end{document}\n";
+  const id = ("a-" + c.id).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40);
+  if (bouton){ bouton.disabled = true; bouton.textContent = "Génération… (≈ 30 s)"; }
+  const g = await api("POST", "/api/admin/generate", {tex, n: 5, niveau: NIVEAUX_QCM[c.classe] || "4ème",
+    titre: "Automatismes — " + c.titre, difficulte: "facile",
+    consignes: "QCM d'AUTOMATISMES : 5 questions flash (calcul mental, réflexes), une seule étape, sans calculatrice. Chaque question travaille un des automatismes listés ; couvre-en le plus possible et varie les situations si la liste est courte. Pas de question de cours théorique."});
+  await api("PUT", "/api/admin/quiz/" + encodeURIComponent(id), g.quiz);
+  Object.assign(c, {autoQcm: id, autoTheme: th.id, autoQcmPublie: false, autoQcmExpl: g.quiz.questions.every(q => q.explication)});
+  await syncQcm(c);
+  sauver(c, 0); renderPanneaux();
+}
+async function completerAuto(){
+  if (autoEnCours) return; autoEnCours = true;
+  try {
+    for (const c of Object.values(chapitres)){
+      if (c.classe !== "4eme" || c.autoQcm || !themeAuto(c) || autoEchecs.has(c.id) || dirty.has(c.id)) continue;
+      try { await genererAuto(c); }
+      catch(e){ if (e.code === "auth") return; autoEchecs.add(c.id); /* réessayé à la prochaine ouverture */ }
+    }
+  } finally { autoEnCours = false; }
 }
 function coursTex(c){ return c && /\.tex$/i.test(c.lien || ""); }
 async function chargerTitres(nom){
@@ -477,6 +593,7 @@ function sauver(ch, delai=500){
   clearTimeout(timers[ch.id]);
   timers[ch.id] = setTimeout(() => { timers[ch.id] = null; ecrire(ch.id); }, delai);
   if ((ch.terminusVersion || 0) < 2 && coursTex(ch)) setTimeout(completerTerminus, delai + 4000);   // nouvelle ligne : sa feuille Entraînement
+  if (ch.classe === "4eme" && !ch.autoQcm && themeAuto(ch)) setTimeout(completerAuto, delai + 3000);   // nouvelle ligne de 4ème : son QCM Automatismes
 }
 let file = Promise.resolve();
 function ecrire(id){
@@ -507,7 +624,7 @@ async function init(){
     const d = await api("GET", "/api/admin/frise");
     chapitres = {}; (d.chapitres || []).forEach(c => chapitres[c.id] = c);
     $("#login").hidden = true; charge = true; trier(); render();
-    completerExplications().then(completerTerminus);
+    completerExplications().then(completerAuto).then(completerTerminus);
   } catch(e){ if (e.code !== "auth") toast("Chargement impossible : " + (e.message || "réseau")); }
 }
 function deconnecter(msg){
@@ -732,6 +849,12 @@ function renderPanneaux(){
             ? `<a href="${esc(urlFichier(c.terminusPdf ? c.terminus.replace(/\.tex$/, ".pdf") : c.terminus))}" target="_blank" rel="noopener">feuille${c.terminusPdf ? " PDF" : ""} ↗</a> · <a href="#" id="terminus-corrige">corrigé${c.terminusPdfCorrige ? " PDF" : ""} ↗</a>${c.terminusPdf && c.terminusPdfCorrige ? "" : ` · <b>PDF non compilé</b> (les élèves voient la feuille sans figures)${c.terminusErreur ? " : " + esc(c.terminusErreur.slice(0, 120)) : ""}`}`
             : coursTex(c) ? (terminusEchecs.has(c.id) ? "échec, réessayé à la prochaine ouverture" : "en préparation (2 à 4 min : rédaction puis compilation)…") : "il faut un cours .tex"}</span>
           ${(c.terminusVersion || 0) >= 2 ? `<button class="btn" type="button" id="terminus-refaire">Refaire la feuille</button>` : ""}</div>
+        ${c.classe === "4eme" ? `<div class="ligne-form"><span class="note"><b>Terminus · Automatismes</b> (QCM de 5 questions) :</span>
+          <select id="auto-theme" aria-label="Thème d'automatismes du programme de 4ème">
+            <option value="">aucun</option>${AUTOMATISMES_4EME.map(a => `<option value="${a.id}" ${themeAuto(c) === a.id ? "selected" : ""}>${esc(a.nom)}</option>`).join("")}</select>
+          ${c.autoQcm ? (c.autoQcmPublie ? `<a class="note" href="entrainement.html?q=${encodeURIComponent(c.autoQcm)}" target="_blank" rel="noopener">QCM ouvert ✓ ↗</a>` : `<span class="note">QCM prêt (s'ouvre au terminus)</span>`)
+            : themeAuto(c) ? `<span class="note">${autoEchecs.has(c.id) ? "échec, réessayé à la prochaine ouverture" : "en préparation…"}</span>` : ""}
+          ${themeAuto(c) ? `<button class="btn" type="button" id="auto-refaire">${c.autoQcm ? "Refaire le QCM" : "Générer le QCM"}</button>` : ""}</div>` : ""}
         <form class="ligne-form" id="form-notion"><input type="text" id="nn-titre" placeholder="Nouvelle station"><button class="btn" type="submit">Ajouter</button></form>
         <span class="note" id="ndel-msg"></span>
       </div>
@@ -820,6 +943,17 @@ function renderPanneaux(){
     tr.disabled = true; tr.textContent = "Génération… (2 à 4 min)";
     try { await genererTerminus(c); toast("Nouvelle feuille Entraînement prête"); }
     catch(e){ if (e.code !== "auth") toast("Feuille impossible : " + (e.message || "réseau")); tr.disabled = false; tr.textContent = "Refaire la feuille"; }
+  };
+  const at = $("#auto-theme"); if (at) at.onchange = async () => {
+    c.autoTheme = at.value;
+    if (c.autoQcm && c.autoQcmPublie){ try { await api("POST", "/api/admin/quiz/" + encodeURIComponent(c.autoQcm) + "/practice", {on: false}); } catch(e){} }
+    if (c.autoQcm){ delete c.autoQcm; delete c.autoQcmPublie; delete c.autoQcmExpl; }
+    autoEchecs.delete(c.id); sauver(c, 0); renderPanneaux();
+    toast(at.value ? "Thème changé : le QCM Automatismes va être refait" : "Pas de QCM Automatismes pour cette ligne");
+  };
+  const ar = $("#auto-refaire"); if (ar) ar.onclick = async () => {
+    try { await genererAuto(c, ar); toast("QCM Automatismes prêt"); }
+    catch(e){ if (e.code !== "auth") toast("QCM Automatismes impossible : " + (e.message || "réseau")); ar.disabled = false; ar.textContent = "Refaire le QCM"; }
   };
   p.querySelectorAll("[data-nqcm]").forEach(b => b.onclick = () => {
     const n = c.notions.find(n => n.id === b.dataset.nqcm); if (n) genererQcm(c, n, b);
