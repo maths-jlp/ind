@@ -278,7 +278,7 @@ const CLASSES = [["4eme","4e"],["1ere","1re Spé"],["terminale","Tle Spé"]];
 const nomClasse = k => (CLASSES.find(c => c[0] === k) || [k, k || "Sans classe"])[1];
 const lienOk = u => /^https?:\/\//i.test(String(u||"").trim()) || /^[\w.\-\/ %]+\.(pdf|html?|tex)$/i.test(String(u||"").trim());
 const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
-const SITE = "https://malignemaths.com/";
+const SITE = "https://maths-en-ligne.com/";
 // Un nom simple (sans "/") désigne un fichier envoyé au Worker ; sinon chemin du site ou adresse complète.
 const urlFichier = f => /^https?:\/\//i.test(f) ? f : String(f).includes("/") ? SITE + String(f).replace(/^\/+/, "") : API + "/api/frise-file/" + encodeURIComponent(f);
 const fichierOk = f => /\.(pdf|tex)$/i.test(String(f||"").trim());
