@@ -263,6 +263,7 @@ a.nom:hover{border-bottom-color:var(--line);color:var(--line)}
   </div>
 
   <div id="contenu"></div>
+  <section id="ctrl-zone" class="panneau" hidden></section>
 </div>
 
 <script>
@@ -623,7 +624,7 @@ async function init(){
   try {
     const d = await api("GET", "/api/admin/frise");
     chapitres = {}; (d.chapitres || []).forEach(c => chapitres[c.id] = c);
-    $("#login").hidden = true; charge = true; trier(); render();
+    $("#login").hidden = true; charge = true; await chargerControles(); trier(); render();
     completerExplications().then(completerAuto).then(completerTerminus);
   } catch(e){ if (e.code !== "auth") toast("Chargement impossible : " + (e.message || "réseau")); }
 }
@@ -638,11 +639,78 @@ $("#form-login").onsubmit = ev => {
   $("#login-msg").textContent = "Connexion…"; init();
 };
 
+/* ---------- Contrôles corrigés (liste sous la ligne de la classe) ---------- */
+let controles = null;
+async function chargerControles(){
+  try { controles = (await api("GET", "/api/admin/controles")).controles || []; }
+  catch(e){ if (e.code !== "auth"){ controles = []; toast("Contrôles : chargement impossible"); } }
+}
+async function sauverControle(c, msg){
+  msg.textContent = "Enregistrement…";
+  try {
+    const r = await api("PUT", "/api/admin/controle/" + encodeURIComponent(c.id), {id:c.id, titre:c.titre, classe:c.classe, date:c.date, publie:c.publie, cree:c.cree});
+    if (r.controle) Object.assign(c, r.controle);
+    msg.textContent = "Enregistré";
+  } catch(e){ if (e.code !== "auth") msg.textContent = "Non enregistré" + (e.message ? " : " + e.message : "") + "."; }
+}
+function renderControles(){
+  const zone = $("#ctrl-zone");
+  if (!charge || !controles){ zone.hidden = true; return; }
+  zone.hidden = false;
+  const liste = controles.filter(x => x.classe === classeActive).sort((a, b) => (a.cree || 0) - (b.cree || 0));
+  zone.innerHTML = `
+    <h2>Contrôles corrigés · ${esc(nomClasse(classeActive))}</h2>
+    <span class="note">Un seul PDF par contrôle (sujet et corrigé ensemble). Coché « Publié » : visible des élèves sur la page de la classe, une fois le PDF déposé.</span>
+    ${liste.map(x => `<div class="ligne-form" data-ctrl="${esc(x.id)}" style="border-top:1px solid var(--rule);padding-top:10px">
+      <input type="text" data-k="titre" value="${esc(x.titre)}" aria-label="Titre du contrôle" style="flex:2 1 180px">
+      <input type="text" data-k="date" value="${esc(x.date || "")}" placeholder="Date (ex. Octobre 2026)" aria-label="Date du contrôle" style="flex:1 1 140px">
+      <label class="note"><input type="checkbox" data-k="publie" ${x.publie ? "checked" : ""}> Publié</label>
+      <label class="btn" style="cursor:pointer">${x.pdf ? "Remplacer le PDF" : "Ajouter le PDF"}<input type="file" accept=".pdf" data-pdf hidden></label>
+      <span class="note" data-msg>${x.pdf ? "PDF déposé" : "Pas encore de PDF"}</span>
+      <button class="btn ghost" type="button" data-supp>Supprimer</button>
+    </div>`).join("") || '<span class="note">Aucun contrôle pour cette classe.</span>'}
+    <div class="ligne-form"><button class="btn" type="button" id="ctrl-nouveau">+ Nouveau contrôle</button></div>`;
+  zone.querySelectorAll("[data-ctrl]").forEach(row => {
+    const c = controles.find(x => x.id === row.dataset.ctrl);
+    const msg = row.querySelector("[data-msg]");
+    row.querySelectorAll("[data-k]").forEach(el => {
+      el.onchange = () => {
+        c[el.dataset.k] = el.type === "checkbox" ? el.checked : el.value.trim();
+        if (c.publie && !c.pdf){ el.checked !== undefined && el.type === "checkbox" && (el.checked = false); c.publie = false; msg.textContent = "Déposez d'abord le PDF pour publier."; return; }
+        sauverControle(c, msg);
+      };
+    });
+    row.querySelector("[data-pdf]").onchange = async ev => {
+      const f = ev.target.files[0]; if (!f) return;
+      msg.textContent = "Envoi du PDF…";
+      try {
+        await api("PUT", "/api/admin/controle-pdf/" + encodeURIComponent(c.id), f, "application/pdf");
+        c.pdf = true; toast("PDF déposé"); renderControles();
+      } catch(e){ if (e.code !== "auth") msg.textContent = "Envoi impossible" + (e.message ? " (" + e.message + ")" : "") + "."; }
+    };
+    row.querySelector("[data-supp]").onclick = async () => {
+      if (!window.confirm("Supprimer ce contrôle et son PDF ?")) return;
+      try {
+        await api("DELETE", "/api/admin/controle/" + encodeURIComponent(c.id));
+        controles = controles.filter(x => x.id !== c.id); renderControles(); toast("Contrôle supprimé");
+      } catch(e){ if (e.code !== "auth") toast("Suppression impossible"); }
+    };
+  });
+  const nouv = $("#ctrl-nouveau");
+  if (nouv) nouv.onclick = async () => {
+    const c = {id:uid("k"), titre:"Nouveau contrôle", classe:classeActive, date:"", publie:false, pdf:false, cree:Date.now()};
+    try {
+      const r = await api("PUT", "/api/admin/controle/" + c.id, {id:c.id, titre:c.titre, classe:c.classe, date:"", publie:false, cree:c.cree});
+      controles.push(r.controle || c); renderControles();
+    } catch(e){ if (e.code !== "auth") toast("Création impossible"); }
+  };
+}
+
 /* ---------- Rendu ---------- */
 function ch(){ return chapitres[actif]; }
 function notionNom(c, nid){ const n = c.notions.find(n => n.id === nid); return n ? n.titre : "—"; }
 
-function render(){ renderHaut(); renderPanneaux(); }
+function render(){ renderHaut(); renderPanneaux(); renderControles(); }
 
 function etatChap(x){ return x.publie === false ? "masque" : x.ferme ? "ferme" : x.termine ? "termine" : "ouvert"; }
 const ETATS = [["masque","Masqué","n'apparaît pas sur la ligne"],["ferme","🔒 Fermé","affiché, contenu inaccessible"],["ouvert","Ouvert","accessible aux élèves"],["termine","Terminé","ouvert, cours et QCM entiers"]];

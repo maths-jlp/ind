@@ -60,6 +60,15 @@ main{padding:40px max(20px,env(safe-area-inset-right,0px)) 40px max(20px,env(saf
 .legende{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-weight:600;align-items:center}
 .legende span{display:inline-flex;gap:6px;align-items:center}
 .mini{width:14px;height:14px;border-radius:50%;border:3px solid var(--encre);background:#fff;display:inline-block}
+.controles{background:#fff;border-radius:14px;padding:8px 20px;max-width:720px}
+.controles h2{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+.ctrl{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 0;border-top:1px solid #EDF0F3}
+.ctrl:first-of-type{border-top:0}
+.ctrl-nom{font-weight:800}
+.ctrl-date{font-size:13px;color:var(--muted)}
+.ctrl-btns{display:flex;gap:8px}
+.btn-ctrl{font-weight:800;font-size:14px;padding:8px 14px;border-radius:8px;border:2px solid var(--vert);color:var(--vert);background:#fff}
+.btn-ctrl.plein{background:var(--vert);color:#fff}
 </style>
 <script data-goatcounter="https://malignemaths.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -81,6 +90,7 @@ main{padding:40px max(20px,env(safe-area-inset-right,0px)) 40px max(20px,env(saf
     <a class="bouton qcm" href="eval.html">QCM</a>
     <a class="bouton entr" href="entrainement.html">Entraînement</a>
   </div>
+  <section class="controles" id="controles" aria-label="Contrôles corrigés" hidden></section>
 </main>
 <script>
 const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
@@ -163,6 +173,17 @@ fetch(API + "/api/frise/" + classe).then(r => r.json()).then(d => {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(placer);
   let att; window.addEventListener("resize", () => { clearTimeout(att); att = setTimeout(placer, 120); });
 }).catch(() => { document.getElementById("zone").innerHTML = '<div class="vide">Trafic interrompu : la ligne n\'a pas pu être chargée.</div>'; });
+
+// Contrôles corrigés : gérés depuis la page prof ; seulement les publiés avec PDF ; rien s'il n'y en a pas.
+fetch(API + "/api/controles/" + classe).then(r => r.json()).then(d => {
+  const liste = d.controles || [];
+  if (!liste.length) return;
+  const box = document.getElementById("controles");
+  box.innerHTML = '<h2>Contrôles corrigés · ' + esc(L.nom) + '</h2>' + liste.map(c =>
+    '<div class="ctrl"><div><div class="ctrl-nom">' + esc(c.titre) + '</div><div class="ctrl-date">' + esc(c.date || "") + '</div></div>' +
+    '<div class="ctrl-btns"><a class="btn-ctrl plein" href="' + esc(API + c.url) + '" target="_blank" rel="noopener">Ouvrir le PDF</a></div></div>').join("");
+  box.hidden = false;
+}).catch(() => {});
 </script>
 </body>
 </html>
