@@ -126,6 +126,7 @@ button.exo.terminus-btn.correction:hover .ref{color:#fff}
 .doc-in table{border-collapse:collapse;margin:10px auto}
 .doc-in td{border:1px solid var(--rule);padding:4px 10px;text-align:center}
 .doc-in .katex-display{overflow-x:auto;overflow-y:hidden}
+pre.code{background:var(--surface-2);border:1px solid var(--rule);border-left:3px solid #2e7d32;border-radius:6px;padding:8px 12px;margin:12px 0;overflow-x:auto;white-space:pre;font-size:.9em;max-width:100%}
 </style>
 <script data-goatcounter="https://malignemaths.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -377,6 +378,11 @@ function texVersHtml(src){
   t = t.replace(/(^|[^\\])%.*$/gm, "$1");
   t = t.replace(/\\begin\{(tikzpicture|pspicture|figure)\}[\s\S]*?\\end\{\1\}/g, "\u0001FIG\u0001");
   t = t.replace(/\\includegraphics(\[[^\]]*\])?\{[^}]*\}/g, "\u0001FIG\u0001");
+  // blocs de code (lstlisting, verbatim, minted), y compris la forme sans backslash « lstlisting … lstlisting »
+  const codes = [];
+  const codeBloc = corps => { codes.push(corps.replace(/^\s*\n|\s+$/g, "")); return "\n\n\u0003" + (codes.length - 1) + "\u0003\n\n"; };
+  t = t.replace(/\\?begin\{(lstlisting|verbatim|minted)\}(\[[^\]]*\])?(\{[^}]*\})?([\s\S]*?)\\?end\{\1\}/g, (_, nom, o, a, corps) => codeBloc(corps));
+  t = t.replace(/\blstlisting\b([\s\S]*?)\blstlisting\b/g, (_, corps) => codeBloc(corps));
   const maths = [];
   const garde = s => { maths.push(s); return "\u0002" + (maths.length - 1) + "\u0002"; };
   t = t.replace(/\\begin\{(align\*?|equation\*?|cases|array|gather\*?)\}[\s\S]*?\\end\{\1\}/g, garde);
@@ -411,6 +417,7 @@ function texVersHtml(src){
   t = t.replace(/\\begin\{[^}]*\}|\\end\{[^}]*\}/g, "");
   t = t.replace(/\\\\(\[[^\]]*\])?/g, "<br>").replace(/\\[a-zA-Z]+\*?/g, "").replace(/[{}]/g, "");
   t = t.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean).map(p => /^<(h2|h3|div|\/div|ol|ul|table)/.test(p) ? p : "<p>" + p + "</p>").join("\n");
+  t = t.replace(/<p>\u0003(\d+)\u0003<\/p>|\u0003(\d+)\u0003/g, (_, a, b) => '<pre class="code"><code>' + esc(codes[+(a || b)]) + '</code></pre>');
   t = t.replace(/\u0001FIG\u0001/g, '<span class="figure">Figure : voir le fichier d\'origine</span>');
   t = t.replace(/\u0002(\d+)\u0002/g, (_, i) => esc(maths[+i]));
   return t;
