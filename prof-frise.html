@@ -489,7 +489,7 @@ async function completerExplications(){
           if (!r.manquantes){ c.autoQcmExpl = true; change = true; }
         } catch(e){ if (e.code === "auth") return; }
       }
-      if (change) await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(c.id), JSON.parse(JSON.stringify(c))).catch(() => {});
+      if (change && chapitres[c.id] && !estSupprime(c.id)) await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(c.id), JSON.parse(JSON.stringify(c))).catch(() => {});
     }
   } finally { explEnCours = false; }
 }
@@ -587,7 +587,17 @@ function trier(){
   h1.addEventListener("blur", () => finir(true));
 })();
 function etatSave(t, cls){ const e = document.getElementById("etat-save"); if (e){ e.textContent = t; e.className = "etat-save " + (cls || ""); } }
+// Chapitres supprimés : mémorisés quelques minutes pour qu'aucune tâche de fond (génération du terminus,
+// des automatismes, des explications) ni une lecture encore en cache côté Cloudflare ne les fasse réapparaître.
+const SUPPR_CLE = "frise-supprimes", SUPPR_DUREE = 10 * 60 * 1000;
+function supprimesLire(){
+  try { const o = JSON.parse(localStorage.getItem(SUPPR_CLE) || "{}"), t = Date.now(), r = {};
+        for (const k in o) if (t - o[k] < SUPPR_DUREE) r[k] = o[k]; return r; } catch(e){ return {}; }
+}
+function estSupprime(id){ return id in supprimesLire(); }
+function marquerSupprime(id){ try { const o = supprimesLire(); o[id] = Date.now(); localStorage.setItem(SUPPR_CLE, JSON.stringify(o)); } catch(e){} }
 function sauver(ch, delai=500){
+  if (!chapitres[ch.id] || estSupprime(ch.id)) return;   // chapitre supprimé entre-temps : on ne le recrée pas
   etatSave("● Enregistrement…", "attente");
   ch.maj = Date.now();
   dirty.add(ch.id);
@@ -600,22 +610,26 @@ let file = Promise.resolve();
 function ecrire(id){
   file = file.then(async () => {
     const ch = chapitres[id];
-    if (!ch) { dirty.delete(id); return; }
+    if (!ch || estSupprime(id)) { dirty.delete(id); return; }
     const copie = JSON.parse(JSON.stringify(ch));
     try {
       await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(id), copie);
-      if (ch.notions.some(n => n.qcm) && await syncQcm(ch)) await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(id), JSON.parse(JSON.stringify(ch)));
+      if (ch.notions.some(n => n.qcm) && await syncQcm(ch) && chapitres[id] && !estSupprime(id)) await api("PUT", "/api/admin/frise/chapitre/" + encodeURIComponent(id), JSON.parse(JSON.stringify(ch)));
       if (!Object.values(timers).some(Boolean)) etatSave("✓ Enregistré en ligne");
     } catch(e){ etatSave("✕ Non enregistré", "erreur"); if (e.code !== "auth") toast("Enregistrement impossible : " + (e.message || "réseau")); }
     if (!timers[id]) dirty.delete(id);
   });
 }
 async function supprimer(id){
+  marquerSupprime(id);
+  clearTimeout(timers[id]); timers[id] = null; dirty.delete(id);
   delete chapitres[id];
   trier(); render();
   try {
+    await file;   // laisse finir un enregistrement déjà parti, pour que la suppression passe bien après
     await api("DELETE", "/api/admin/frise/chapitre/" + encodeURIComponent(id));
-  } catch(e){ toast("Suppression impossible"); }
+    toast("Chapitre supprimé");
+  } catch(e){ if (e.code !== "auth") toast("Suppression impossible : " + (e.message || "réseau")); }
 }
 
 async function init(){
@@ -624,6 +638,9 @@ async function init(){
   try {
     const d = await api("GET", "/api/admin/frise");
     chapitres = {}; (d.chapitres || []).forEach(c => chapitres[c.id] = c);
+    for (const id of Object.keys(supprimesLire())) if (chapitres[id]){   // encore renvoyé par le cache : on le retire et on re-supprime
+      delete chapitres[id]; api("DELETE", "/api/admin/frise/chapitre/" + encodeURIComponent(id)).catch(() => {});
+    }
     $("#login").hidden = true; charge = true; await chargerControles(); trier(); render();
     completerExplications().then(completerAuto).then(completerTerminus);
   } catch(e){ if (e.code !== "auth") toast("Chargement impossible : " + (e.message || "réseau")); }
