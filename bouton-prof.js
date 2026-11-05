@@ -7,6 +7,8 @@
     if (location.pathname.split("/").pop() === CIBLE) return;
     var a = document.createElement("a");
     a.href = CIBLE;
+    a.target = "_blank";
+    a.rel = "noopener";
     a.id = "acces-prof-frise";
     a.setAttribute("aria-hidden", "true");
     a.tabIndex = -1;
