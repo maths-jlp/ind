@@ -1202,6 +1202,29 @@ $("#imp-fichier").onchange = async ev => {
   const f = ev.target.files[0]; ev.target.value = ""; if (!f) return;
   const estTex = /\.tex$/i.test(f.name);
   let nom;
+  // Réimport d'un cours déjà importé (même nom de fichier) : on remplace le .tex en gardant la ligne, ses stations et ses exercices.
+  if (estTex){
+    const nomCible = nomPropre(f.name.replace(/\.[^.]+$/, "")) + ".tex";
+    const exist = Object.values(chapitres).find(ch => ch.lien === nomCible);
+    if (exist){
+      const nouveau = await f.text();
+      const ancien = texBrut[nomCible] || await fetch(API + "/api/admin/frise-file/" + encodeURIComponent(nomCible), {headers: {Authorization: "Bearer " + TOKEN}}).then(r => r.ok ? r.text() : "").catch(() => "");
+      const Hn = titresCours(nouveau), Ha = ancien ? titresCours(ancien) : null;
+      const memeStructure = Ha && Hn.length === Ha.length && Hn.every((h, k) => h.niv === Ha[k].niv);
+      const la = (ancien || "").split("\n"), ln = nouveau.split("\n");
+      const nbDiff = la.length === ln.length ? ln.filter((l, k) => l !== la[k]).length : null;
+      const msgs = memeStructure
+        ? `Le cours « ${exist.titre} » existe déjà.\nRemplacer son .tex par ce fichier ?\n(Structure identique : ${Hn.length} parties/sous-parties${nbDiff !== null ? ", " + nbDiff + " ligne(s) modifiée(s)" : ""}. La ligne, les stations et les exercices sont conservés.)`
+        : `Le cours « ${exist.titre} » existe déjà, mais la structure a changé (${Ha ? Ha.length : "?"} parties avant, ${Hn.length} maintenant).\nRemplacer quand même le .tex ? Les stations seront conservées ; vérifiez ensuite leurs « parties du cours ».`;
+      if (!confirm(msgs)){ return; }
+      try { await envoyerFichier(f); }
+      catch(e){ if (e.code !== "auth") toast("Envoi impossible : " + (e.message || "réseau")); return; }
+      texBrut[nomCible] = nouveau; texCache[nomCible] = Hn;
+      toast("Cours mis à jour : " + exist.titre + (memeStructure ? " (structure inchangée)" : ""));
+      fermerImport(); render();
+      return;
+    }
+  }
   $("#imp-etape1").querySelector("label").textContent = "Envoi du fichier…";
   try { nom = await envoyerFichier(f); }
   catch(e){ if (e.code !== "auth") toast("Envoi impossible : " + (e.message || "réseau")); return; }
