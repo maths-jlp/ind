@@ -209,7 +209,7 @@ a{color:inherit;text-decoration:none}
     </div>
   </div>
 
-  <a class="prof" id="espace-prof" href="prof.html" target="_blank" rel="noopener">Espace prof</a>
+  <a class="prof" href="prof.html" target="_blank" rel="noopener">Espace prof</a>
 
   <nav class="legende" aria-label="Choisir sa ligne">
     <h2>Ma ligne</h2>
@@ -242,10 +242,6 @@ document.querySelectorAll("[data-encours]").forEach(el => {
     document.addEventListener("click", ev => { if (!c.hidden && !c.contains(ev.target)) fermer(); });
     document.addEventListener("keydown", ev => { if (ev.key === "Escape") fermer(); });
   })();
-</script>
-<script>
-  // « Espace prof » : prof.html s'ouvre par le lien, prof-frise.html dans un second onglet
-  document.getElementById("espace-prof").addEventListener("click", () => { window.open("prof-frise.html", "_blank", "noopener"); });
 </script>
 <script src="bouton-prof.js"></script>
 </body>

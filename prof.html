@@ -257,20 +257,25 @@
       if (d.demande && lire()) bc.postMessage({ token: lire() });
       else if (d.token && document.body.classList.contains("verrou")) verifier(d.token, true);
     };
-    async function verifier(tok, silencieux) {
-      if (!tok) return;
+    async function verifier(tok, silencieux, w) {
+      const ko = () => { if (w) { try { w.close(); } catch (e) {} } };
+      if (!tok) { ko(); return; }
       if (!silencieux) msg("Vérification…");
       try {
         const r = await fetch(API + "/api/admin/roster", { headers: { Authorization: "Bearer " + tok } });
-        if (r.status === 401) { try { sessionStorage.removeItem("qcm-token"); } catch (e) {} msg(silencieux ? "" : "Mot de passe incorrect."); return; }
+        if (r.status === 401) { try { sessionStorage.removeItem("qcm-token"); } catch (e) {} msg(silencieux ? "" : "Mot de passe incorrect."); ko(); return; }
         if (!r.ok) throw 0;
         try { sessionStorage.setItem("qcm-token", tok); } catch (e) {}
         document.body.classList.remove("verrou"); msg("");
         if (bc) bc.postMessage({ token: tok });
-      } catch (e) { msg("Connexion au serveur impossible, réessayez."); }
+        if (w) w.location = "prof-frise.html";
+      } catch (e) { msg("Connexion au serveur impossible, réessayez."); ko(); }
     }
     document.getElementById("form-verrou").addEventListener("submit", ev => {
-      ev.preventDefault(); verifier(document.getElementById("mdp").value.trim());
+      ev.preventDefault();
+      // Second onglet (prof-frise) ouvert pendant le clic, sinon le navigateur le bloque ; rempli une fois le mot de passe validé
+      let w = null; try { w = window.open("", "_blank"); } catch (e) {}
+      verifier(document.getElementById("mdp").value.trim(), false, w);
     });
     document.getElementById("deconnexion").addEventListener("click", () => {
       try { sessionStorage.removeItem("qcm-token"); } catch (e) {}
