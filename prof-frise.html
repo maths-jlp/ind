@@ -641,6 +641,7 @@ async function init(){
     for (const id of Object.keys(supprimesLire())) if (chapitres[id]){   // encore renvoyé par le cache : on le retire et on re-supprime
       delete chapitres[id]; api("DELETE", "/api/admin/frise/chapitre/" + encodeURIComponent(id)).catch(() => {});
     }
+    if (bcAuth) bcAuth.postMessage({token: TOKEN});
     $("#login").hidden = true; charge = true; await chargerControles(); trier(); render();
     completerExplications().then(completerAuto).then(completerTerminus);
   } catch(e){ if (e.code !== "auth") toast("Chargement impossible : " + (e.message || "réseau")); }
@@ -655,6 +656,17 @@ $("#form-login").onsubmit = ev => {
   try { sessionStorage.setItem("qcm-token", TOKEN); } catch(e){}
   $("#login-msg").textContent = "Connexion…"; init();
 };
+// Connexion partagée entre les onglets du site (prof, prof-frise…) : se connecter dans l'un déverrouille les autres
+let bcAuth = null;
+try {
+  bcAuth = new BroadcastChannel("qcm-auth");
+  bcAuth.onmessage = ev => {
+    const d = ev.data || {};
+    if (d.demande && TOKEN) bcAuth.postMessage({token: TOKEN});
+    else if (d.token && !TOKEN){ TOKEN = d.token; try { sessionStorage.setItem("qcm-token", TOKEN); } catch(e){} init(); }
+  };
+  if (!TOKEN) bcAuth.postMessage({demande: true});
+} catch(e){}
 
 /* ---------- Contrôles corrigés (liste sous la ligne de la classe) ---------- */
 let controles = null;

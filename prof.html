@@ -115,15 +115,15 @@
   <section class="sec gestion">
     <h2>Gestion</h2>
     <div class="list">
-      <a class="it " href="index.html">
+      <a class="it " href="index.html" target="_blank" rel="opener">
         <span class="ic">🗺</span>
         <span class="tx"><b>Accueil élèves</b><small>plan du réseau</small></span>
       </a>
-      <a class="it " href="prof-frise.html">
+      <a class="it " href="prof-frise.html" target="_blank" rel="opener">
         <span class="ic">🚇</span>
         <span class="tx"><b>Gérer les lignes</b><small>cours · notions · exercices</small></span>
       </a>
-      <a class="it " href="prof-eval.html">
+      <a class="it " href="prof-eval.html" target="_blank" rel="opener">
         <span class="ic">✅</span>
         <span class="tx"><b>Gérer les QCM</b><small>dépôt · ouverture · notes</small></span>
       </a>
@@ -134,19 +134,19 @@
   <section class="sec outils">
     <h2>Outils transverses</h2>
     <div class="list">
-      <a class="it " href="visualiseur-3d.html">
+      <a class="it " href="visualiseur-3d.html" target="_blank" rel="opener">
         <span class="ic">📐</span>
         <span class="tx"><b>Visualiseur 3D</b><small>points · droites · plans</small></span>
       </a>
-      <a class="it " href="compte-a-rebours.html">
+      <a class="it " href="compte-a-rebours.html" target="_blank" rel="opener">
         <span class="ic">⏱</span>
         <span class="tx"><b>Compte à rebours</b><small>timer projetable</small></span>
       </a>
-      <a class="it " href="fond-projection.html">
+      <a class="it " href="fond-projection.html" target="_blank" rel="opener">
         <span class="ic">🖼</span>
         <span class="tx"><b>Fond projection</b><small>blanc · repère · lignes</small></span>
       </a>
-      <a class="it " href="console-python.html">
+      <a class="it " href="console-python.html" target="_blank" rel="opener">
         <span class="ic">🐍</span>
         <span class="tx"><b>Console Python</b><small>éditeur · exécution · courbes</small></span>
       </a>
@@ -159,26 +159,26 @@
     <div class="list">
     <div class="grp g4">
       <div class="gh"><i class="pas">4</i>4ème</div>
-      <a class="it " href="fractions-equivalentes.html">
+      <a class="it " href="fractions-equivalentes.html" target="_blank" rel="opener">
         <span class="ic">🍕</span>
         <span class="tx"><b>Fractions équivalentes</b><small>disque · barre · carré</small></span>
       </a>
-      <a class="it " href="tirage-eleve.html?classe=4eme">
+      <a class="it " href="tirage-eleve.html?classe=4eme" target="_blank" rel="opener">
         <span class="ic">🎓</span>
         <span class="tx"><b>Tirage élève</b><small>4ème — prénoms</small></span>
       </a>
-      <a class="it " href="frise.html?classe=4eme">
+      <a class="it " href="frise.html?classe=4eme" target="_blank" rel="opener">
         <span class="ic">🚇</span>
         <span class="tx"><b>Ma ligne 4ème</b><small>progression du chapitre</small></span>
       </a>
     </div>
     <div class="grp g1">
       <div class="gh"><i class="pas">1</i>1ère spé</div>
-      <a class="it " href="tirage-eleve.html?classe=1ere">
+      <a class="it " href="tirage-eleve.html?classe=1ere" target="_blank" rel="opener">
         <span class="ic">🎓</span>
         <span class="tx"><b>Tirage élève</b><small>1ère — prénoms</small></span>
       </a>
-      <a class="it " href="frise.html?classe=1ere">
+      <a class="it " href="frise.html?classe=1ere" target="_blank" rel="opener">
         <span class="ic">🚇</span>
         <span class="tx"><b>Ma ligne 1ère</b><small>progression du chapitre</small></span>
       </a>
@@ -189,11 +189,11 @@
     </div>
     <div class="grp gt">
       <div class="gh"><i class="pas">T</i>Terminale spé</div>
-      <a class="it " href="tirage-eleve.html?classe=terminale">
+      <a class="it " href="tirage-eleve.html?classe=terminale" target="_blank" rel="opener">
         <span class="ic">🎓</span>
         <span class="tx"><b>Tirage élève</b><small>Terminale — prénoms</small></span>
       </a>
-      <a class="it " href="frise.html?classe=terminale">
+      <a class="it " href="frise.html?classe=terminale" target="_blank" rel="opener">
         <span class="ic">🚇</span>
         <span class="tx"><b>Ma ligne Terminale</b><small>progression du chapitre</small></span>
       </a>
@@ -209,7 +209,7 @@
   <section class="sec externes">
     <h2>Liens externes</h2>
     <div class="list">
-      <a class="it " href="compte-est-bon.html">
+      <a class="it " href="compte-est-bon.html" target="_blank" rel="opener">
         <span class="ic">🔢</span>
         <span class="tx"><b>Le compte est bon</b><small>6 plaques · cible · timer</small></span>
       </a>
@@ -250,6 +250,13 @@
     const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
     const msg = t => { document.getElementById("verrou-msg").textContent = t || ""; };
     const lire = () => { try { return sessionStorage.getItem("qcm-token") || ""; } catch (e) { return ""; } };
+    // Connexion partagée entre les onglets du site (prof, prof-frise…) : se connecter dans l'un déverrouille les autres
+    let bc = null; try { bc = new BroadcastChannel("qcm-auth"); } catch (e) {}
+    if (bc) bc.onmessage = ev => {
+      const d = ev.data || {};
+      if (d.demande && lire()) bc.postMessage({ token: lire() });
+      else if (d.token && document.body.classList.contains("verrou")) verifier(d.token, true);
+    };
     async function verifier(tok, silencieux) {
       if (!tok) return;
       if (!silencieux) msg("Vérification…");
@@ -259,6 +266,7 @@
         if (!r.ok) throw 0;
         try { sessionStorage.setItem("qcm-token", tok); } catch (e) {}
         document.body.classList.remove("verrou"); msg("");
+        if (bc) bc.postMessage({ token: tok });
       } catch (e) { msg("Connexion au serveur impossible, réessayez."); }
     }
     document.getElementById("form-verrou").addEventListener("submit", ev => {
@@ -268,7 +276,7 @@
       try { sessionStorage.removeItem("qcm-token"); } catch (e) {}
       document.getElementById("mdp").value = ""; document.body.classList.add("verrou");
     });
-    if (lire()) verifier(lire(), true); else document.getElementById("mdp").focus();
+    if (lire()) verifier(lire(), true); else { if (bc) bc.postMessage({ demande: true }); document.getElementById("mdp").focus(); }
   })();
 </script>
 
