@@ -109,7 +109,6 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--rule);b
 .exo.s-devoir .st{color:var(--line)}
 .s-devoir .st svg,.clignote svg{animation:clignote 1.1s ease-in-out infinite}
 @keyframes clignote{50%{opacity:.12}}
-@media (prefers-reduced-motion:reduce){.s-devoir .st svg,.clignote svg{animation:none}}
 .exo.sel{outline:3px solid var(--line);outline-offset:1px}
 .exo .st{border:0;background:transparent;padding:0 4px 0 7px;color:var(--c);display:flex;align-items:center}
 .exo .corps{flex:1;min-width:0;border:0;background:transparent;text-align:left;padding:6px 8px 6px 3px;display:flex;gap:6px;align-items:center;justify-content:space-between}
@@ -864,8 +863,10 @@ function renderHaut(){
   frise.querySelectorAll("[data-filtre]").forEach(b => b.onclick = () => { filtreLieu = b.dataset.filtre; ls.set("frise.lieu", filtreLieu); renderHaut(); });
   frise.querySelectorAll("[data-cycle]").forEach(b => b.onclick = () => {
     const e = c.exos.find(x => x.id === b.dataset.cycle); if (!e) return;
-    const i = STATUTS.findIndex(s => s[0] === e.statut);
-    e.statut = STATUTS[(i+1) % STATUTS.length][0]; sauver(c, 300); render();
+    // Ordre des clics : À faire → (1 clic) En cours → (2 clics) Fait → (3 clics) Devoir → (4 clics) À faire
+    const ordre = ["a_faire","en_cours","fait","devoir"];
+    const i = ordre.indexOf(e.statut);
+    e.statut = ordre[(i+1) % ordre.length]; sauver(c, 300); render();
   });
   frise.querySelectorAll("[data-sel]").forEach(b => b.onclick = () => { selExo = selExo === b.dataset.sel ? null : b.dataset.sel; render(); });
 }
