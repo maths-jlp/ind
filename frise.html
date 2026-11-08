@@ -69,6 +69,7 @@ a.nom{border-bottom:2px solid var(--line-soft)}
 .exo.s-fait{background:var(--surface-2);border-color:transparent}
 .exo.s-fait .ref{color:var(--muted);text-decoration:line-through}
 
+.exos-tete .pt-devoir{display:inline-flex;vertical-align:-2px;margin-right:5px;color:var(--line)}
 /* Statut « Devoir » : donné aux élèves pour la prochaine séance — pastille qui clignote */
 .exo.s-devoir{background:var(--cbg);border-color:var(--line)}
 .exo.s-devoir .st{color:var(--line)}
@@ -249,7 +250,7 @@ function render(){
       ${lienOk(no.lien) ? (lisible(no.lien) ? `<button class="nom" style="background:none;border:0;border-bottom:2px solid var(--line-soft);padding:0;cursor:pointer" data-cours="${esc(no.lien)}" data-titre="${esc(no.titre)}">${esc(no.titre)}</button>` : `<a class="nom" href="${esc(no.lien)}" target="_blank" rel="noopener">${esc(no.titre)} ↗</a>`) : `<div class="nom">${esc(no.titre)}</div>`}
       <div class="exos">${no.qcm && no.qcmPublie && etat !== "futur" ? `<a class="exo qcm-chip" href="entrainement.html?q=${encodeURIComponent(no.qcm)}" title="Teste-toi sur cette partie du cours : 5 questions"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg><span class="ref">Teste-toi !</span></a>` : ""}</div>
       <div class="exos-box${ouverts.has(c.id + ":" + no.id) && ex.length ? " ouvert" : ""}">
-        <button class="exos-tete" type="button" data-tog="${esc(c.id + ":" + no.id)}" aria-expanded="${ouverts.has(c.id + ":" + no.id) && ex.length ? "true" : "false"}" ${ex.length ? "" : "disabled"} title="${ex.length ? "Voir les exercices de cette notion" : "Pas encore d'exercice sur cette notion"}">Exercices <span class="compte">${ex.length ? ex.filter(e => e.statut === "fait").length + "/" + ex.length + " faits" : "0"}</span>${ex.length ? '<span class="fleche" aria-hidden="true">▾</span>' : ""}</button>
+        <button class="exos-tete" type="button" data-tog="${esc(c.id + ":" + no.id)}" aria-expanded="${ouverts.has(c.id + ":" + no.id) && ex.length ? "true" : "false"}" ${ex.length ? "" : "disabled"} title="${ex.length ? (ex.some(e => e.statut === "devoir") ? "Devoir pour la prochaine fois : " + ex.filter(e => e.statut === "devoir").map(e => esc(e.ref)).join(", ") + " — voir les exercices" : "Voir les exercices de cette notion") : "Pas encore d'exercice sur cette notion"}">${ex.some(e => e.statut === "devoir") ? `<span class="clignote pt-devoir">${icon("i-devoir")}</span>` : ""}Exercices <span class="compte">${ex.length ? ex.filter(e => e.statut === "fait").length + "/" + ex.length + " faits" : "0"}</span>${ex.length ? '<span class="fleche" aria-hidden="true">▾</span>' : ""}</button>
         <div class="exos-liste">${ex.map((e, k) => {
         const st = STATUTS[e.statut] || STATUTS.a_faire, li = LIEUX[e.lieu] || LIEUX.classe;
         const tip = `${esc(e.ref)} · ${li[0]} · ${DIFFS[e.diff]||""} · ${st[0]}`;
