@@ -68,6 +68,13 @@ a.nom{border-bottom:2px solid var(--line-soft)}
 .exo.s-en_cours{background:var(--cbg);border-color:var(--c)}
 .exo.s-fait{background:var(--surface-2);border-color:transparent}
 .exo.s-fait .ref{color:var(--muted);text-decoration:line-through}
+
+/* Statut « Devoir » : donné aux élèves pour la prochaine séance — pastille qui clignote */
+.exo.s-devoir{background:var(--cbg);border-color:var(--line)}
+.exo.s-devoir .st{color:var(--line)}
+.s-devoir .st svg,.clignote svg{animation:clignote 1.1s ease-in-out infinite}
+@keyframes clignote{50%{opacity:.12}}
+@media (prefers-reduced-motion:reduce){.s-devoir .st svg,.clignote svg{animation:none}}
 .exo .st{color:var(--c)}
 .exo .lieu{color:var(--muted)}
 .ref{font-family:var(--f-mono);font-weight:600}
@@ -135,6 +142,7 @@ pre.code{background:var(--surface-2);border:1px solid var(--rule);border-left:3p
   <symbol id="i-classe" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="2.5" width="12.4" height="8" rx="1"/><path d="M5 14l3-3.5 3 3.5"/></g></symbol>
   <symbol id="i-maison" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.2L8 3l6 5.2"/><path d="M3.8 7v6.5h8.4V7"/><path d="M6.6 13.5V10h2.8v3.5"/></g></symbol>
   <symbol id="i-afaire" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-devoir" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="currentColor"/></symbol>
   <symbol id="i-encours" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 2.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></symbol>
   <symbol id="i-fait" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" fill="currentColor"/><path d="M5.5 9.3l2.3 2.3 4.6-4.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-doc" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3.5 1.8h6l3 3v9.4h-9z"/><path d="M9.5 1.8v3h3M5.5 8.5h5M5.5 11h5"/></g></symbol>
@@ -173,7 +181,7 @@ pre.code{background:var(--surface-2);border:1px solid var(--rule);border-left:3p
 (() => {
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const STATUTS = {a_faire:["À faire","i-afaire"], en_cours:["En cours","i-encours"], fait:["Fait","i-fait"]};
+const STATUTS = {a_faire:["À faire","i-afaire"], devoir:["Devoir pour la prochaine fois","i-devoir"], en_cours:["En cours","i-encours"], fait:["Fait","i-fait"]};
 const DIFFS = {vert:"Facile", orange:"Moyen", rouge:"Difficile"};
 const LIEUX = {classe:["En classe","i-classe"], maison:["À la maison","i-maison"]};
 const CLASSES = {"4eme":"4ème", "1ere":"1ère Spé", "terminale":"Terminale Spé"};
@@ -198,7 +206,7 @@ $("#legende").innerHTML =
   `<span><span class="pastille" style="background:var(--vert)"></span>Facile</span>
    <span><span class="pastille" style="background:var(--orange)"></span>Moyen</span>
    <span><span class="pastille" style="background:var(--rouge)"></span>Difficile</span><span>·</span>
-   <span>${icon("i-afaire")}À faire</span><span>${icon("i-encours")}En cours</span><span>${icon("i-fait")}Fait</span><span>·</span>
+   <span>${icon("i-afaire")}À faire</span><span class="clignote" style="color:var(--line);font-weight:700">${icon("i-devoir")}Devoir pour la prochaine fois</span><span>${icon("i-encours")}En cours</span><span>${icon("i-fait")}Fait</span><span>·</span>
    <span>${icon("i-classe")}En classe</span><span>${icon("i-maison")}À la maison</span><span>${icon("i-doc")}Fichier à ouvrir</span><span style="color:var(--ratp);font-weight:700">${icon("i-fait")}Teste-toi ! (5 questions)</span>`;
 
 fetch(API + "/api/frise/" + encodeURIComponent(classe)).then(r => r.json()).then(d => {

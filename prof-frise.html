@@ -103,6 +103,13 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--rule);b
 .exo.s-en_cours{background:var(--cbg);border-color:var(--c)}
 .exo.s-fait{background:var(--surface-2);border-color:transparent}
 .exo.s-fait .ref{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+
+/* Statut « Devoir » : donné aux élèves pour la prochaine séance — pastille qui clignote */
+.exo.s-devoir{background:var(--cbg);border-color:var(--line)}
+.exo.s-devoir .st{color:var(--line)}
+.s-devoir .st svg,.clignote svg{animation:clignote 1.1s ease-in-out infinite}
+@keyframes clignote{50%{opacity:.12}}
+@media (prefers-reduced-motion:reduce){.s-devoir .st svg,.clignote svg{animation:none}}
 .exo.sel{outline:3px solid var(--line);outline-offset:1px}
 .exo .st{border:0;background:transparent;padding:0 4px 0 7px;color:var(--c);display:flex;align-items:center}
 .exo .corps{flex:1;min-width:0;border:0;background:transparent;text-align:left;padding:6px 8px 6px 3px;display:flex;gap:6px;align-items:center;justify-content:space-between}
@@ -182,6 +189,7 @@ a.nom:hover{border-bottom-color:var(--line);color:var(--line)}
   <symbol id="i-classe" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="2.5" width="12.4" height="8" rx="1"/><path d="M5 14l3-3.5 3 3.5"/></g></symbol>
   <symbol id="i-maison" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.2L8 3l6 5.2"/><path d="M3.8 7v6.5h8.4V7"/><path d="M6.6 13.5V10h2.8v3.5"/></g></symbol>
   <symbol id="i-afaire" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-devoir" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="currentColor"/></symbol>
   <symbol id="i-encours" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 2.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></symbol>
   <symbol id="i-fait" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" fill="currentColor"/><path d="M5.5 9.3l2.3 2.3 4.6-4.8" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-doc" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3.5 1.8h6l3 3v9.4h-9z"/><path d="M9.5 1.8v3h3M5.5 8.5h5M5.5 11h5"/></g></symbol>
@@ -271,7 +279,7 @@ a.nom:hover{border-bottom-color:var(--line);color:var(--line)}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-const STATUTS = [["a_faire","À faire","i-afaire"],["en_cours","En cours","i-encours"],["fait","Fait","i-fait"]];
+const STATUTS = [["a_faire","À faire","i-afaire"],["devoir","Devoir","i-devoir"],["en_cours","En cours","i-encours"],["fait","Fait","i-fait"]];
 const DIFFS = [["vert","Facile"],["orange","Moyen"],["rouge","Difficile"]];
 const LIEUX = [["classe","En classe","i-classe"],["maison","À la maison","i-maison"]];
 const CLASSES = [["4eme","4e"],["1ere","1re Spé"],["terminale","Tle Spé"]];
@@ -815,7 +823,7 @@ function renderHaut(){
   frise.innerHTML = `
     <div class="resume">
       <div class="ici">${icon("i-encours",18)}<span>On en est à : <b>${esc(c.notions[cur] ? c.notions[cur].titre : "—")}</b></span></div>
-      <span class="stat">Station <strong>${cur+1}</strong> / ${c.notions.length} · ${tous.length ? `<strong>${tous.length - n("fait")}</strong> exercice${tous.length - n("fait") > 1 ? "s" : ""} non terminé${tous.length - n("fait") > 1 ? "s" : ""}${maisonAFaire ? ` dont <strong>${maisonAFaire}</strong> à la maison` : ""}` : "aucun exercice"}</span>
+      <span class="stat">Station <strong>${cur+1}</strong> / ${c.notions.length} · ${tous.length ? `<strong>${tous.length - n("fait")}</strong> exercice${tous.length - n("fait") > 1 ? "s" : ""} non terminé${tous.length - n("fait") > 1 ? "s" : ""}${maisonAFaire ? ` dont <strong>${maisonAFaire}</strong> à la maison` : ""}${n("devoir") ? ` · <strong>${n("devoir")}</strong> devoir${n("devoir") > 1 ? "s" : ""} donné${n("devoir") > 1 ? "s" : ""}` : ""}` : "aucun exercice"}</span>
       <div class="nav-ici">
         <button class="btn" id="reculer" ${cur<=0?"disabled":""}>◂ Reculer</button>
         <button class="btn primary" id="avancer" ${cur>=c.notions.length-1?"disabled":""}>Notion suivante ▸</button>
@@ -830,6 +838,7 @@ function renderHaut(){
         <span><span class="pastille" style="background:var(--orange)"></span>Moyen</span>
         <span><span class="pastille" style="background:var(--rouge)"></span>Difficile</span>
         <span style="color:var(--fg)">${icon("i-afaire",14)}À faire</span>
+        <span class="clignote" style="color:var(--line);font-weight:700">${icon("i-devoir",14)}Devoir (donné pour la prochaine fois)</span>
         <span style="color:var(--fg)">${icon("i-encours",14)}En cours</span>
         <span style="color:var(--fg)">${icon("i-fait",14)}Fait</span>
         <span>${icon("i-classe",14)}Classe</span><span>${icon("i-maison",14)}Maison</span>
@@ -856,7 +865,7 @@ function renderHaut(){
   frise.querySelectorAll("[data-cycle]").forEach(b => b.onclick = () => {
     const e = c.exos.find(x => x.id === b.dataset.cycle); if (!e) return;
     const i = STATUTS.findIndex(s => s[0] === e.statut);
-    e.statut = STATUTS[(i+1) % 3][0]; sauver(c, 300); render();
+    e.statut = STATUTS[(i+1) % STATUTS.length][0]; sauver(c, 300); render();
   });
   frise.querySelectorAll("[data-sel]").forEach(b => b.onclick = () => { selExo = selExo === b.dataset.sel ? null : b.dataset.sel; render(); });
 }
