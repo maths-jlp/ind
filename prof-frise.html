@@ -170,6 +170,13 @@ details.reglages[open]{display:flex;flex-direction:column;gap:10px}
 .etat-save{font-size:13px;font-weight:700;color:var(--vert);white-space:nowrap}
 .etat-save.attente{color:var(--orange)}
 .etat-save.erreur{color:var(--rouge)}
+.travail{position:fixed;top:12px;right:12px;z-index:60;max-width:min(380px,calc(100vw - 24px));background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:13px;font-weight:700;display:flex;gap:10px;align-items:flex-start;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.travail .rond{flex:none;width:18px;height:18px;margin-top:1px;border-radius:50%;border:3px solid rgba(128,128,128,.4);border-top-color:currentColor;animation:tourne .8s linear infinite}
+.travail .txt small{display:block;font-weight:400;opacity:.8;margin-top:2px}
+.travail .pts::after{content:"";animation:pts 1.4s steps(4,end) infinite}
+@keyframes tourne{to{transform:rotate(360deg)}}
+@keyframes pts{0%{content:""}25%{content:"."}50%{content:".."}75%,100%{content:"..."}}
+@media (prefers-reduced-motion:reduce){.travail .rond,.travail .pts::after{animation:none}.travail .pts::after{content:"…"}}
 .toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700}
 .classes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .classes .seg button{font-size:14px;padding:6px 14px}
@@ -458,7 +465,7 @@ async function genererTousQcm(c, bouton){
 // 3 exercices de bon niveau sur tout le chapitre (générée par le Worker), affichée au bout de la ligne.
 let terminusEnCours = false; const terminusEchecs = new Set();
 async function genererTerminus(c){
-  const r = await api("POST", "/api/admin/frise/terminus/" + encodeURIComponent(c.id));
+  const r = await avecBandeau("Feuille Entraînement — " + c.titre, () => api("POST", "/api/admin/frise/terminus/" + encodeURIComponent(c.id)));
   Object.assign(c, {terminus:r.nom, terminusCorrige:r.corrige, terminusPdf:!!r.pdf, terminusPdfCorrige:!!r.pdfCorrige,
     terminusErreur:r.erreur || "", terminusVersion:2, terminusMaj:Date.now()});
   sauver(c, 0); renderPanneaux();
@@ -486,13 +493,13 @@ async function completerExplications(){
       let change = false;
       for (const n of aFaire){
         try {
-          const r = await api("POST", "/api/admin/quiz/" + encodeURIComponent(n.qcm) + "/explications");
+          const r = await avecBandeau("Explications — " + n.titre, () => api("POST", "/api/admin/quiz/" + encodeURIComponent(n.qcm) + "/explications"));
           if (!r.manquantes){ n.qcmExpl = true; change = true; }
         } catch(e){ if (e.code === "auth") return; /* réessayé à la prochaine ouverture */ }
       }
       if (c.autoQcm && !c.autoQcmExpl){
         try {
-          const r = await api("POST", "/api/admin/quiz/" + encodeURIComponent(c.autoQcm) + "/explications");
+          const r = await avecBandeau("Explications — Automatismes", () => api("POST", "/api/admin/quiz/" + encodeURIComponent(c.autoQcm) + "/explications"));
           if (!r.manquantes){ c.autoQcmExpl = true; change = true; }
         } catch(e){ if (e.code === "auth") return; }
       }
@@ -509,7 +516,7 @@ async function genererQcm(c, n, bouton, silencieux){
   const niveau = NIVEAUX_QCM[c.classe] || "";
   if (bouton){ bouton.disabled = true; bouton.textContent = "Génération… (≈ 30 s)"; }
   try {
-    const g = await api("POST", "/api/admin/generate", {tex: partie, n: 5, niveau, titre: c.titre + " — " + n.titre, difficulte: "moyen"});
+    const g = await avecBandeau("QCM « " + n.titre + " »", () => api("POST", "/api/admin/generate", {tex: partie, n: 5, niveau, titre: c.titre + " — " + n.titre, difficulte: "moyen"}));
     await api("PUT", "/api/admin/quiz/" + encodeURIComponent(id), g.quiz);
     n.qcm = id; n.qcmPublie = false; n.qcmExpl = g.quiz.questions.every(q => q.explication);
     await syncQcm(c);
@@ -535,9 +542,9 @@ async function genererAuto(c, bouton){
     "Chapitre en cours : " + c.titre + ".\n\\end{document}\n";
   const id = ("a-" + c.id).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40);
   if (bouton){ bouton.disabled = true; bouton.textContent = "Génération… (≈ 30 s)"; }
-  const g = await api("POST", "/api/admin/generate", {tex, n: 5, niveau: NIVEAUX_QCM[c.classe] || "4ème",
+  const g = await avecBandeau("QCM Automatismes — " + c.titre, () => api("POST", "/api/admin/generate", {tex, n: 5, niveau: NIVEAUX_QCM[c.classe] || "4ème",
     titre: "Automatismes — " + c.titre, difficulte: "facile",
-    consignes: "QCM d'AUTOMATISMES : 5 questions flash (calcul mental, réflexes), une seule étape, sans calculatrice. Chaque question travaille un des automatismes listés ; couvre-en le plus possible et varie les situations si la liste est courte. Pas de question de cours théorique."});
+    consignes: "QCM d'AUTOMATISMES : 5 questions flash (calcul mental, réflexes), une seule étape, sans calculatrice. Chaque question travaille un des automatismes listés ; couvre-en le plus possible et varie les situations si la liste est courte. Pas de question de cours théorique."}));
   await api("PUT", "/api/admin/quiz/" + encodeURIComponent(id), g.quiz);
   Object.assign(c, {autoQcm: id, autoTheme: th.id, autoQcmPublie: false, autoQcmExpl: g.quiz.questions.every(q => q.explication)});
   await syncQcm(c);
@@ -1110,6 +1117,21 @@ function confirmer(sel, msg, ok){
   z.querySelector("[data-non]").onclick = () => renderPanneaux();
 }
 let tt;
+// Bandeau « création en cours » : visible tant qu'une génération (QCM, Entraînement, explications) tourne.
+const taches = new Map(); let tacheNo = 0, tacheTimer = null;
+function majBandeau(){
+  let b = $(".travail");
+  if (!taches.size){ if (b) b.remove(); clearInterval(tacheTimer); tacheTimer = null; return; }
+  if (!b){ b = document.createElement("div"); b.className = "travail"; b.setAttribute("role","status"); document.body.appendChild(b); }
+  const l = [...taches.values()], t0 = Math.min(...l.map(x => x.t0)), sec = Math.round((Date.now() - t0) / 1000);
+  b.innerHTML = '<span class="rond"></span><span class="txt">Création en cours<span class="pts"></span>' +
+    '<small>' + esc(l[0].label) + (l.length > 1 ? " (+" + (l.length - 1) + " autre" + (l.length > 2 ? "s" : "") + ")" : "") + " — " + sec + " s</small></span>";
+  if (!tacheTimer) tacheTimer = setInterval(majBandeau, 1000);
+}
+async function avecBandeau(label, fn){
+  const k = ++tacheNo; taches.set(k, {label, t0: Date.now()}); majBandeau();
+  try { return await fn(); } finally { taches.delete(k); majBandeau(); }
+}
 function toast(msg){
   let t = $(".toast"); if (!t){ t = document.createElement("div"); t.className = "toast"; t.setAttribute("role","status"); document.body.appendChild(t); }
   t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2200);
