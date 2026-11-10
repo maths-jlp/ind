@@ -65,15 +65,16 @@ a.nom{border-bottom:2px solid var(--line-soft)}
 
 .exo{display:inline-flex;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--rule);border-left:4px solid var(--c);border-radius:6px;padding:2px 6px 2px 4px;font-size:12px;text-decoration:none;color:var(--fg)}
 .exo.d-vert{--c:var(--vert);--cbg:var(--vert-bg)}.exo.d-orange{--c:var(--orange);--cbg:var(--orange-bg)}.exo.d-rouge{--c:var(--rouge);--cbg:var(--rouge-bg)}
-.exo.s-en_cours{background:var(--cbg);border-color:var(--c)}
 .exo.s-fait{background:var(--surface-2);border-color:transparent}
 .exo.s-fait .ref{color:var(--muted);text-decoration:line-through}
 
-.exos-tete .pt-devoir{display:inline-flex;vertical-align:-2px;margin-right:5px;color:var(--line)}
-/* Statut « Devoir » : donné aux élèves pour la prochaine séance — pastille qui clignote */
-.exo.s-devoir{background:var(--cbg);border-color:var(--line)}
-.exo.s-devoir .st{color:var(--line)}
-.s-devoir .st svg,.clignote svg{animation:clignote 1.1s ease-in-out infinite}
+.exos-tete .pt-devoir{display:inline-flex;vertical-align:-2px;margin-right:5px;color:#1f6fe0}
+/* Statuts : Masqué (prof seulement) · À faire (visible, pastille bleue qui clignote) · Fait */
+.exo.s-a_faire{background:#e8f0fd;border-color:#1f6fe0}
+.exo.s-a_faire .st{color:#1f6fe0}
+.s-a_faire .st svg,.clignote svg{animation:clignote 1.1s ease-in-out infinite}
+.exo.s-masque{opacity:.5;border-style:dashed;background:transparent}
+.exo.s-masque .ref{font-style:italic}
 @keyframes clignote{50%{opacity:.12}}
 .exo .st{color:var(--c)}
 .exo .lieu{color:var(--muted)}
@@ -192,7 +193,9 @@ pre.code{background:var(--surface-2);border:1px solid var(--rule);border-left:3p
 (() => {
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const STATUTS = {a_faire:["À faire","i-afaire"], devoir:["Devoir pour la prochaine fois","i-devoir"], en_cours:["En cours","i-encours"], fait:["Fait","i-fait"]};
+const STATUTS = {masque:["Masqué (visible de toi seul)","i-afaire"], a_faire:["À faire","i-devoir"], fait:["Fait","i-fait"]};
+const normStatut = s => s === "masque" || s === "fait" ? s : "a_faire";   // ancien « devoir » / « en cours » → À faire
+
 const DIFFS = {vert:"Facile", orange:"Moyen", rouge:"Difficile"};
 const LIEUX = {classe:["En classe","i-classe"], maison:["À la maison","i-maison"]};
 const CLASSES = {"4eme":"4ème", "1ere":"1ère Spé", "terminale":"Terminale Spé"};
@@ -203,6 +206,7 @@ const urlF = f => /^https?:\/\//i.test(f) ? f : String(f).includes("/") ? f : AP
 const lisible = u => /\.(pdf|tex)$/i.test(String(u||""));
 const icon = (id, w=14) => `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const classe = new URLSearchParams(location.search).get("classe") || "terminale";
+const PROF = new URLSearchParams(location.search).get("prof") === "1";
 let chapitres = [], idx = 0, maxIdx = 0;
 const ouverts = new Set();   // stations dont la boîte « Exercices » est dépliée
 
@@ -217,11 +221,10 @@ $("#legende").innerHTML =
   `<span><span class="pastille" style="background:var(--vert)"></span>Facile</span>
    <span><span class="pastille" style="background:var(--orange)"></span>Moyen</span>
    <span><span class="pastille" style="background:var(--rouge)"></span>Difficile</span><span>·</span>
-   <span>${icon("i-afaire")}À faire</span><span class="clignote" style="color:var(--line);font-weight:700">${icon("i-devoir")}Devoir pour la prochaine fois</span><span>${icon("i-encours")}En cours</span><span>${icon("i-fait")}Fait</span><span>·</span>
+   <span class="clignote" style="color:#1f6fe0;font-weight:700">${icon("i-devoir")}À faire</span><span>${icon("i-fait")}Fait</span>${PROF ? `<span style="opacity:.6">${icon("i-afaire")}Masqué (toi seul)</span>` : ""}<span>·</span>
    <span>${icon("i-classe")}En classe</span><span>${icon("i-maison")}À la maison</span><span>${icon("i-doc")}Fichier à ouvrir</span><span style="color:var(--ratp);font-weight:700">${icon("i-fait")}Teste-toi ! (5 questions)</span>`;
 
 /* ---------- Mode prof (?prof=1) : mêmes frises, mais un clic sur un exercice change son statut — rien d'autre ---------- */
-const PROF = new URLSearchParams(location.search).get("prof") === "1";
 let TOKEN = ""; try { TOKEN = sessionStorage.getItem("qcm-token") || ""; } catch(e){}
 const versConnexion = () => { try { sessionStorage.removeItem("qcm-token"); } catch(e){} location.replace("prof.html"); };
 if (PROF && !TOKEN) versConnexion();
@@ -256,6 +259,7 @@ const chargement = PROF
 chargement.then(d => {
   const cle = x => x.ordre ?? x.cree ?? 0;
   chapitres = (d.chapitres || []).slice().sort((a, b) => cle(a) - cle(b));   // ordre de l'année
+  chapitres.forEach(c => { c.exos = (c.exos || []).map(e => Object.assign(e, {statut: normStatut(e.statut)})).filter(e => PROF || e.statut !== "masque"); });   // masqués : jamais montrés aux élèves
   // Chapitre « On est ici » choisi par le prof : les suivants ne s'ouvrent pas.
   // Les chapitres fermés par le prof restent sur la ligne mais ne s'ouvrent pas.
   if (!PROF) chapitres = chapitres.filter(c => !c.ferme);
@@ -295,7 +299,7 @@ function render(){
       ${lienOk(no.lien) ? (lisible(no.lien) ? `<button class="nom" style="background:none;border:0;border-bottom:2px solid var(--line-soft);padding:0;cursor:pointer" data-cours="${esc(no.lien)}" data-titre="${esc(no.titre)}">${esc(no.titre)}</button>` : `<a class="nom" href="${esc(no.lien)}" target="_blank" rel="noopener">${esc(no.titre)} ↗</a>`) : `<div class="nom">${esc(no.titre)}</div>`}
       <div class="exos">${no.qcm && no.qcmPublie && etat !== "futur" ? `<a class="exo qcm-chip" href="entrainement.html?q=${encodeURIComponent(no.qcm)}" title="Teste-toi sur cette partie du cours : 5 questions"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg><span class="ref">Teste-toi !</span></a>` : ""}</div>
       <div class="exos-box${ouverts.has(c.id + ":" + no.id) && ex.length ? " ouvert" : ""}">
-        <button class="exos-tete" type="button" data-tog="${esc(c.id + ":" + no.id)}" aria-expanded="${ouverts.has(c.id + ":" + no.id) && ex.length ? "true" : "false"}" ${ex.length ? "" : "disabled"} title="${ex.length ? (ex.some(e => e.statut === "devoir") ? "Devoir pour la prochaine fois : " + ex.filter(e => e.statut === "devoir").map(e => esc(e.ref)).join(", ") + " — voir les exercices" : "Voir les exercices de cette notion") : "Pas encore d'exercice sur cette notion"}">${ex.some(e => e.statut === "devoir") ? `<span class="clignote pt-devoir">${icon("i-devoir")}</span>` : ""}Exercices <span class="compte">${ex.length ? ex.filter(e => e.statut === "fait").length + "/" + ex.length + " faits" : "0"}</span>${ex.length ? '<span class="fleche" aria-hidden="true">▾</span>' : ""}</button>
+        <button class="exos-tete" type="button" data-tog="${esc(c.id + ":" + no.id)}" aria-expanded="${ouverts.has(c.id + ":" + no.id) && ex.length ? "true" : "false"}" ${ex.length ? "" : "disabled"} title="${ex.length ? (ex.some(e => e.statut === "a_faire") ? "À faire : " + ex.filter(e => e.statut === "a_faire").map(e => esc(e.ref)).join(", ") + " — voir les exercices" : "Voir les exercices de cette notion") : "Pas encore d'exercice sur cette notion"}">${ex.some(e => e.statut === "a_faire") ? `<span class="clignote pt-devoir">${icon("i-devoir")}</span>` : ""}Exercices <span class="compte">${ex.length ? ex.filter(e => e.statut === "fait").length + "/" + ex.length + " faits" : "0"}</span>${ex.length ? '<span class="fleche" aria-hidden="true">▾</span>' : ""}</button>
         <div class="exos-liste">${ex.map((e, k) => {
         const st = STATUTS[e.statut] || STATUTS.a_faire, li = LIEUX[e.lieu] || LIEUX.classe;
         const tip = `${esc(e.ref)} · ${li[0]} · ${DIFFS[e.diff]||""} · ${st[0]}`;
@@ -335,7 +339,7 @@ function render(){
   majDeplie();
   if (PROF) $("#ligne").querySelectorAll("[data-cycle]").forEach(b => b.onclick = () => {
     const e = c.exos.find(x => x.id === b.dataset.cycle); if (!e) return;
-    const ordre = ["a_faire","en_cours","fait","devoir"];   // même ordre que la page de gestion
+    const ordre = ["masque","a_faire","fait"];
     e.statut = ordre[(ordre.indexOf(e.statut) + 1) % ordre.length];
     const box = $(".ligne-box"), sl = box.scrollLeft, st = box.scrollTop, wy = window.scrollY;
     sauverProf(c); render(); box.scrollLeft = sl; box.scrollTop = st; window.scrollTo(0, wy);

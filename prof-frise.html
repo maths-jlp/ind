@@ -100,14 +100,15 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--rule);b
 .exo.d-vert{--c:var(--vert);--cbg:var(--vert-bg)}
 .exo.d-orange{--c:var(--orange);--cbg:var(--orange-bg)}
 .exo.d-rouge{--c:var(--rouge);--cbg:var(--rouge-bg)}
-.exo.s-en_cours{background:var(--cbg);border-color:var(--c)}
 .exo.s-fait{background:var(--surface-2);border-color:transparent}
 .exo.s-fait .ref{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
 
-/* Statut « Devoir » : donné aux élèves pour la prochaine séance — pastille qui clignote */
-.exo.s-devoir{background:var(--cbg);border-color:var(--line)}
-.exo.s-devoir .st{color:var(--line)}
-.s-devoir .st svg,.clignote svg{animation:clignote 1.1s ease-in-out infinite}
+/* Statuts : Masqué (prof seulement) · À faire (visible, pastille bleue qui clignote) · Fait */
+.exo.s-a_faire{background:#e8f0fd;border-color:#1f6fe0}
+.exo.s-a_faire .st{color:#1f6fe0}
+.s-a_faire .st svg,.clignote svg{animation:clignote 1.1s ease-in-out infinite}
+.exo.s-masque{opacity:.5;border-style:dashed;background:transparent}
+.exo.s-masque .ref{font-style:italic}
 @keyframes clignote{50%{opacity:.12}}
 .exo.sel{outline:3px solid var(--line);outline-offset:1px}
 .exo .st{border:0;background:transparent;padding:0 4px 0 7px;color:var(--c);display:flex;align-items:center}
@@ -285,7 +286,8 @@ a.nom:hover{border-bottom-color:var(--line);color:var(--line)}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-const STATUTS = [["a_faire","À faire","i-afaire"],["devoir","Devoir","i-devoir"],["en_cours","En cours","i-encours"],["fait","Fait","i-fait"]];
+const STATUTS = [["masque","Masqué","i-afaire"],["a_faire","À faire","i-devoir"],["fait","Fait","i-fait"]];
+const normStatut = s => s === "masque" || s === "fait" ? s : "a_faire";   // ancien « devoir » / « en cours » → À faire
 const DIFFS = [["vert","Facile"],["orange","Moyen"],["rouge","Difficile"]];
 const LIEUX = [["classe","En classe","i-classe"],["maison","À la maison","i-maison"]];
 const CLASSES = [["4eme","4e"],["1ere","1re Spé"],["terminale","Tle Spé"]];
@@ -651,7 +653,7 @@ async function init(){
   if (!TOKEN){ $("#login").hidden = false; return; }
   try {
     const d = await api("GET", "/api/admin/frise");
-    chapitres = {}; (d.chapitres || []).forEach(c => chapitres[c.id] = c);
+    chapitres = {}; (d.chapitres || []).forEach(c => { (c.exos || []).forEach(e => e.statut = normStatut(e.statut)); chapitres[c.id] = c; });
     for (const id of Object.keys(supprimesLire())) if (chapitres[id]){   // encore renvoyé par le cache : on le retire et on re-supprime
       delete chapitres[id]; api("DELETE", "/api/admin/frise/chapitre/" + encodeURIComponent(id)).catch(() => {});
     }
@@ -829,7 +831,7 @@ function renderHaut(){
   frise.innerHTML = `
     <div class="resume">
       <div class="ici">${icon("i-encours",18)}<span>On en est à : <b>${esc(c.notions[cur] ? c.notions[cur].titre : "—")}</b></span></div>
-      <span class="stat">Station <strong>${cur+1}</strong> / ${c.notions.length} · ${tous.length ? `<strong>${tous.length - n("fait")}</strong> exercice${tous.length - n("fait") > 1 ? "s" : ""} non terminé${tous.length - n("fait") > 1 ? "s" : ""}${maisonAFaire ? ` dont <strong>${maisonAFaire}</strong> à la maison` : ""}${n("devoir") ? ` · <strong>${n("devoir")}</strong> devoir${n("devoir") > 1 ? "s" : ""} donné${n("devoir") > 1 ? "s" : ""}` : ""}` : "aucun exercice"}</span>
+      <span class="stat">Station <strong>${cur+1}</strong> / ${c.notions.length} · ${tous.length ? `<strong>${tous.length - n("fait")}</strong> exercice${tous.length - n("fait") > 1 ? "s" : ""} non terminé${tous.length - n("fait") > 1 ? "s" : ""}${maisonAFaire ? ` dont <strong>${maisonAFaire}</strong> à la maison` : ""}${n("a_faire") ? ` · <strong>${n("a_faire")}</strong> à faire` : ""}${n("masque") ? ` · <strong>${n("masque")}</strong> masqué${n("masque") > 1 ? "s" : ""}` : ""}` : "aucun exercice"}</span>
       <div class="nav-ici">
         <button class="btn" id="reculer" ${cur<=0?"disabled":""}>◂ Reculer</button>
         <button class="btn primary" id="avancer" ${cur>=c.notions.length-1?"disabled":""}>Notion suivante ▸</button>
@@ -843,10 +845,9 @@ function renderHaut(){
         <span><span class="pastille" style="background:var(--vert)"></span>Facile</span>
         <span><span class="pastille" style="background:var(--orange)"></span>Moyen</span>
         <span><span class="pastille" style="background:var(--rouge)"></span>Difficile</span>
-        <span style="color:var(--fg)">${icon("i-afaire",14)}À faire</span>
-        <span class="clignote" style="color:var(--line);font-weight:700">${icon("i-devoir",14)}Devoir (donné pour la prochaine fois)</span>
-        <span style="color:var(--fg)">${icon("i-encours",14)}En cours</span>
+        <span class="clignote" style="color:#1f6fe0;font-weight:700">${icon("i-devoir",14)}À faire (visible des élèves)</span>
         <span style="color:var(--fg)">${icon("i-fait",14)}Fait</span>
+        <span style="color:var(--fg);opacity:.6">${icon("i-afaire",14)}Masqué (toi seul)</span>
         <span>${icon("i-classe",14)}Classe</span><span>${icon("i-maison",14)}Maison</span>
       </div>
     </div>
@@ -871,7 +872,7 @@ function renderHaut(){
   frise.querySelectorAll("[data-cycle]").forEach(b => b.onclick = () => {
     const e = c.exos.find(x => x.id === b.dataset.cycle); if (!e) return;
     // Ordre des clics : À faire → (1 clic) En cours → (2 clics) Fait → (3 clics) Devoir → (4 clics) À faire
-    const ordre = ["a_faire","en_cours","fait","devoir"];
+    const ordre = ["masque","a_faire","fait"];
     const i = ordre.indexOf(e.statut);
     e.statut = ordre[(i+1) % ordre.length]; sauver(c, 300); render();
   });
@@ -994,7 +995,7 @@ function renderPanneaux(){
     if (!brut) { $("#ne-ref").focus(); return; }
     const parts = fichier ? [brut] : brut.split(";").map(s => s.trim()).filter(Boolean);
     const notion = $("#ne-notion").value;
-    parts.forEach(ref => c.exos.push({id:uid("e"), ref, fichier, notion, lieu:nouv.lieu, diff:nouv.diff, statut:"a_faire", ajoute:Date.now()}));
+    parts.forEach(ref => c.exos.push({id:uid("e"), ref, fichier, notion, lieu:nouv.lieu, diff:nouv.diff, statut:"masque", ajoute:Date.now()}));
     sauver(c, 0); toast(parts.length > 1 ? parts.length + " exercices ajoutés" : "Exercice ajouté");
     render(); $("#ne-ref").focus();
   };
