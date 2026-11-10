@@ -123,6 +123,10 @@
         <span class="ic">🚇</span>
         <span class="tx"><b>Gérer les lignes</b><small>cours · notions · exercices</small></span>
       </a>
+      <a class="it " href="#" id="lien-statuts" target="_blank" rel="opener">
+        <span class="ic">🔵</span>
+        <span class="tx"><b>Statuts des exercices</b><small>masqué · à faire · fait</small></span>
+      </a>
       <a class="it " href="prof-eval.html" target="_blank" rel="opener">
         <span class="ic">✅</span>
         <span class="tx"><b>Gérer les QCM</b><small>dépôt · ouverture · notes</small></span>
@@ -268,8 +272,6 @@
         try { sessionStorage.setItem("qcm-token", tok); } catch (e) {}
         document.body.classList.remove("verrou"); msg("");
         if (bc) bc.postMessage({ token: tok });
-        // Par défaut : cet onglet devient la vue « statuts des exercices » (?hub=1 garde le tableau de bord complet)
-        if (!/[?&]hub=1/.test(location.search)) { let c = "terminale"; try { c = localStorage.getItem("prof-classe") || c; } catch (e) {} location.replace("frise.html?prof=1&classe=" + encodeURIComponent(c)); }
       } catch (e) { msg("Connexion au serveur impossible, réessayez."); ko(); }
     }
     document.getElementById("form-verrou").addEventListener("submit", ev => {
@@ -285,6 +287,11 @@
   })();
 </script>
 
+<script>
+  // « Statuts des exercices » : reprend la dernière classe consultée
+  (() => { let c = "terminale"; try { c = localStorage.getItem("prof-classe") || c; } catch (e) {}
+    document.getElementById("lien-statuts").href = "frise.html?prof=1&classe=" + encodeURIComponent(c); })();
+</script>
 <script src="bouton-prof.js"></script>
 </body>
 </html>
