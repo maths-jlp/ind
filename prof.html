@@ -268,14 +268,14 @@
         try { sessionStorage.setItem("qcm-token", tok); } catch (e) {}
         document.body.classList.remove("verrou"); msg("");
         if (bc) bc.postMessage({ token: tok });
-        if (w) w.location = "prof-frise.html";
+        // Par défaut : cet onglet devient la vue « statuts des exercices » (?hub=1 garde le tableau de bord complet)
+        if (!/[?&]hub=1/.test(location.search)) { let c = "terminale"; try { c = localStorage.getItem("prof-classe") || c; } catch (e) {} location.replace("frise.html?prof=1&classe=" + encodeURIComponent(c)); }
       } catch (e) { msg("Connexion au serveur impossible, réessayez."); ko(); }
     }
     document.getElementById("form-verrou").addEventListener("submit", ev => {
       ev.preventDefault();
       // Second onglet (prof-frise) ouvert pendant le clic, sinon le navigateur le bloque ; rempli une fois le mot de passe validé
-      let w = null; try { w = window.open("", "_blank"); } catch (e) {}
-      verifier(document.getElementById("mdp").value.trim(), false, w);
+      verifier(document.getElementById("mdp").value.trim(), false);
     });
     document.getElementById("deconnexion").addEventListener("click", () => {
       try { sessionStorage.removeItem("qcm-token"); } catch (e) {}

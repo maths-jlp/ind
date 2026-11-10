@@ -204,7 +204,7 @@ const lisible = u => /\.(pdf|tex)$/i.test(String(u||""));
 const icon = (id, w=14) => `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const classe = new URLSearchParams(location.search).get("classe") || "terminale";
 let chapitres = [], idx = 0, maxIdx = 0;
-const ouverts = new Set();   // stations dont la boîte « Exercices » est dépliée
+const ouverts = new Set(), deplies = new Set();   // stations dont la boîte « Exercices » est dépliée
 
 const LIGNES = {"4eme":["4","#BB4D98","#fff"], "1ere":["1","#FFCD00","#0E2A47"], "terminale":["T","#E2231A","#fff"]};
 const LG = LIGNES[classe] || ["?","#1f5fbf","#fff"];
@@ -220,17 +220,51 @@ $("#legende").innerHTML =
    <span>${icon("i-afaire")}À faire</span><span class="clignote" style="color:var(--line);font-weight:700">${icon("i-devoir")}Devoir pour la prochaine fois</span><span>${icon("i-encours")}En cours</span><span>${icon("i-fait")}Fait</span><span>·</span>
    <span>${icon("i-classe")}En classe</span><span>${icon("i-maison")}À la maison</span><span>${icon("i-doc")}Fichier à ouvrir</span><span style="color:var(--ratp);font-weight:700">${icon("i-fait")}Teste-toi ! (5 questions)</span>`;
 
-fetch(API + "/api/frise/" + encodeURIComponent(classe)).then(r => r.json()).then(d => {
+/* ---------- Mode prof (?prof=1) : mêmes frises, mais un clic sur un exercice change son statut — rien d'autre ---------- */
+const PROF = new URLSearchParams(location.search).get("prof") === "1";
+let TOKEN = ""; try { TOKEN = sessionStorage.getItem("qcm-token") || ""; } catch(e){}
+const versConnexion = () => { try { sessionStorage.removeItem("qcm-token"); } catch(e){} location.replace("prof.html"); };
+if (PROF && !TOKEN) versConnexion();
+if (PROF){
+  try { localStorage.setItem("prof-classe", classe); } catch(e){}
+  const bar = document.querySelector(".bandeau .droite");
+  const nav = document.createElement("span");
+  nav.style.cssText = "display:inline-flex;gap:6px;align-items:center";
+  nav.innerHTML = Object.keys(CLASSES).map(k => `<a class="btn" href="frise.html?prof=1&classe=${k}" ${k===classe?'style="outline:3px solid currentColor"':""}>${CLASSES[k]}</a>`).join("")
+    + `<a class="btn" href="prof.html?hub=1" target="_blank" rel="noopener" title="Tableau de bord prof complet">Tableau prof</a>`;
+  bar.insertBefore(nav, bar.firstChild);
+  $("#retour-ligne").href = "index.html"; $("#retour-ligne").textContent = "◂ Accueil";
+  document.title = "Statuts — " + (CLASSES[classe] || classe);
+}
+const timersP = {};
+function sauverProf(c){
+  c.maj = Date.now();
+  $("#maj").textContent = "● Enregistrement…";
+  clearTimeout(timersP[c.id]);
+  timersP[c.id] = setTimeout(async () => {
+    try {
+      const r = await fetch(API + "/api/admin/frise/chapitre/" + encodeURIComponent(c.id), {method:"PUT", headers:{Authorization:"Bearer " + TOKEN, "Content-Type":"application/json"}, body:JSON.stringify(c)});
+      if (r.status === 401) return versConnexion();
+      if (!r.ok) throw 0;
+      $("#maj").textContent = "✓ Enregistré en ligne";
+    } catch(e){ $("#maj").textContent = "✕ Non enregistré — recliquez pour réessayer"; }
+  }, 300);
+}
+const chargement = PROF
+  ? fetch(API + "/api/admin/frise", {headers:{Authorization:"Bearer " + TOKEN}}).then(r => { if (r.status === 401){ versConnexion(); throw 0; } return r.json(); }).then(d => ({chapitres:(d.chapitres || []).filter(c => c.classe === classe)}))
+  : fetch(API + "/api/frise/" + encodeURIComponent(classe)).then(r => r.json());
+chargement.then(d => {
   const cle = x => x.ordre ?? x.cree ?? 0;
   chapitres = (d.chapitres || []).slice().sort((a, b) => cle(a) - cle(b));   // ordre de l'année
   // Chapitre « On est ici » choisi par le prof : les suivants ne s'ouvrent pas.
   // Les chapitres fermés par le prof restent sur la ligne mais ne s'ouvrent pas.
-  chapitres = chapitres.filter(c => !c.ferme);
+  if (!PROF) chapitres = chapitres.filter(c => !c.ferme);
   maxIdx = chapitres.length - 1;
   idx = maxIdx;
+  if (PROF){ const k = chapitres.findIndex(c => !c.termine); if (k >= 0) idx = k; }
   const voulu = new URLSearchParams(location.search).get("chap");
   if (voulu){ const k = chapitres.findIndex(c => c.id === voulu); if (k >= 0) idx = k; }
-  if (d.maj) $("#maj").textContent = "Mis à jour le " + new Date(d.maj).toLocaleDateString("fr-FR", {day:"numeric", month:"long"});
+  if (d.maj && !PROF) $("#maj").textContent = "Mis à jour le " + new Date(d.maj).toLocaleDateString("fr-FR", {day:"numeric", month:"long"});
   const sel = document.createElement("select");   // plus affiché : conservé pour ne rien casser
   sel.innerHTML = chapitres.map((c,i) => `<option value="${i}">${i+1}. ${esc(c.titre)}${c.termine ? " ✓" : ""}</option>`).join("");
   sel.onchange = () => { idx = +sel.value; render(); };
@@ -243,6 +277,7 @@ function render(){
   const c = chapitres[idx];
   if (!c){ $("#titre-chap").textContent = "Aucun chapitre pour l'instant"; $("#ligne").innerHTML = ""; return; }
   const cur = c.termine ? c.notions.length : Math.min(c.courant, c.notions.length - 1);
+  if (PROF && !deplies.has(c.id)){ deplies.add(c.id); c.notions.forEach(no => ouverts.add(c.id + ":" + no.id)); }
   $("#titre-chap").textContent = c.titre;
   $("#ici").innerHTML = c.termine ? "<b>Chapitre terminé</b>" : c.notions[cur] ? `On en est à : <b>${esc(c.notions[cur].titre)}</b>` : "";
   $("#prec").hidden = $("#suiv").hidden = chapitres.length < 2;
@@ -266,6 +301,7 @@ function render(){
         const st = STATUTS[e.statut] || STATUTS.a_faire, li = LIEUX[e.lieu] || LIEUX.classe;
         const tip = `${esc(e.ref)} · ${li[0]} · ${DIFFS[e.diff]||""} · ${st[0]}`;
         const inner = `<span class="st">${icon(st[1])}</span><span class="ref">${esc(e.ref)}</span>${e.fichier ? `<span class="lieu">${icon("i-doc")}</span>` : ""}<span class="lieu">${icon(li[1])}</span>`;
+        if (PROF) return `<button class="exo fichier s-${e.statut} d-${e.diff}" data-cycle="${esc(e.id)}" title="${tip} — cliquer pour changer le statut">${inner}</button>`;
         return e.fichier && lienOk(e.fichier)
           ? `<button class="exo fichier s-${e.statut} d-${e.diff}" data-ouvrir="${i}:${k}" title="${tip} — ouvrir">${inner}</button>`
           : `<span class="exo s-${e.statut} d-${e.diff}" title="${tip}">${inner}</span>`;
@@ -298,6 +334,13 @@ function render(){
     majDeplie();
   });
   majDeplie();
+  if (PROF) $("#ligne").querySelectorAll("[data-cycle]").forEach(b => b.onclick = () => {
+    const e = c.exos.find(x => x.id === b.dataset.cycle); if (!e) return;
+    const ordre = ["a_faire","en_cours","fait","devoir"];   // même ordre que la page de gestion
+    e.statut = ordre[(ordre.indexOf(e.statut) + 1) % ordre.length];
+    const box = $(".ligne-box"), sl = box.scrollLeft, st = box.scrollTop, wy = window.scrollY;
+    sauverProf(c); render(); box.scrollLeft = sl; box.scrollTop = st; window.scrollTo(0, wy);
+  });
   document.querySelectorAll("#ligne [data-cours]").forEach(b => b.onclick = () => ouvrir({ref:b.dataset.titre, fichier:b.dataset.cours}));
   $("#ligne").querySelectorAll("[data-ouvrir]").forEach(b => b.onclick = () => {
     const [i, k] = b.dataset.ouvrir.split(":").map(Number);
