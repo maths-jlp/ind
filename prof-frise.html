@@ -104,9 +104,9 @@ select,input[type=text]{background:var(--surface);border:1px solid var(--rule);b
 .exo.s-fait .ref{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
 
 /* Statuts : Masqué (prof seulement) · À faire (visible, pastille bleue qui clignote) · Fait */
-.exo.s-a_faire{background:#e8f0fd;border-color:#1f6fe0}
-.exo.s-a_faire .st{color:#1f6fe0}
-.s-a_faire .st svg,.clignote svg{animation:clignote 1.1s ease-in-out infinite}
+.exo.s-donne{background:#e8f0fd;border-color:#1f6fe0}
+.exo.s-donne .st{color:#1f6fe0}
+.s-donne .st svg,.clignote svg{animation:clignote 1.1s ease-in-out infinite}
 .exo.s-masque{opacity:.5;border-style:dashed;background:transparent}
 .exo.s-masque .ref{font-style:italic}
 @keyframes clignote{50%{opacity:.12}}
@@ -286,8 +286,8 @@ a.nom:hover{border-bottom-color:var(--line);color:var(--line)}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-const STATUTS = [["masque","Masqué","i-afaire"],["a_faire","À faire","i-devoir"],["fait","Fait","i-fait"]];
-const normStatut = s => s === "masque" || s === "fait" ? s : "a_faire";   // ancien « devoir » / « en cours » → À faire
+const STATUTS = [["masque","Masqué","i-afaire"],["donne","À faire","i-devoir"],["fait","Fait","i-fait"]];
+const normStatut = s => s === "fait" ? "fait" : (s === "donne" || s === "devoir" || s === "en_cours") ? "donne" : "masque";   // anciens « devoir » / « en cours » → À faire ; tout le reste (dont l'ancien « à faire ») → Masqué
 const DIFFS = [["vert","Facile"],["orange","Moyen"],["rouge","Difficile"]];
 const LIEUX = [["classe","En classe","i-classe"],["maison","À la maison","i-maison"]];
 const CLASSES = [["4eme","4e"],["1ere","1re Spé"],["terminale","Tle Spé"]];
@@ -831,7 +831,7 @@ function renderHaut(){
   frise.innerHTML = `
     <div class="resume">
       <div class="ici">${icon("i-encours",18)}<span>On en est à : <b>${esc(c.notions[cur] ? c.notions[cur].titre : "—")}</b></span></div>
-      <span class="stat">Station <strong>${cur+1}</strong> / ${c.notions.length} · ${tous.length ? `<strong>${tous.length - n("fait")}</strong> exercice${tous.length - n("fait") > 1 ? "s" : ""} non terminé${tous.length - n("fait") > 1 ? "s" : ""}${maisonAFaire ? ` dont <strong>${maisonAFaire}</strong> à la maison` : ""}${n("a_faire") ? ` · <strong>${n("a_faire")}</strong> à faire` : ""}${n("masque") ? ` · <strong>${n("masque")}</strong> masqué${n("masque") > 1 ? "s" : ""}` : ""}` : "aucun exercice"}</span>
+      <span class="stat">Station <strong>${cur+1}</strong> / ${c.notions.length} · ${tous.length ? `<strong>${tous.length - n("fait")}</strong> exercice${tous.length - n("fait") > 1 ? "s" : ""} non terminé${tous.length - n("fait") > 1 ? "s" : ""}${maisonAFaire ? ` dont <strong>${maisonAFaire}</strong> à la maison` : ""}${n("donne") ? ` · <strong>${n("donne")}</strong> à faire` : ""}${n("masque") ? ` · <strong>${n("masque")}</strong> masqué${n("masque") > 1 ? "s" : ""}` : ""}` : "aucun exercice"}</span>
       <div class="nav-ici">
         <button class="btn" id="reculer" ${cur<=0?"disabled":""}>◂ Reculer</button>
         <button class="btn primary" id="avancer" ${cur>=c.notions.length-1?"disabled":""}>Notion suivante ▸</button>
@@ -872,7 +872,7 @@ function renderHaut(){
   frise.querySelectorAll("[data-cycle]").forEach(b => b.onclick = () => {
     const e = c.exos.find(x => x.id === b.dataset.cycle); if (!e) return;
     // Ordre des clics : À faire → (1 clic) En cours → (2 clics) Fait → (3 clics) Devoir → (4 clics) À faire
-    const ordre = ["masque","a_faire","fait"];
+    const ordre = ["masque","donne","fait"];
     const i = ordre.indexOf(e.statut);
     e.statut = ordre[(i+1) % ordre.length]; sauver(c, 300); render();
   });
