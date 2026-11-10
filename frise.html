@@ -133,6 +133,17 @@ button.exo.terminus-btn.correction:hover .ref{color:#fff}
 .doc-in table{border-collapse:collapse;margin:10px auto}
 .doc-in td{border:1px solid var(--rule);padding:4px 10px;text-align:center}
 .doc-in .katex-display{overflow-x:auto;overflow-y:hidden}
+@media print{
+  body>*:not(#lecteur){display:none!important}
+  .lecteur{position:static;display:block;background:#fff}
+  .lecteur-haut{border:0;padding:0 0 8px}
+  .lecteur-haut .btn{display:none!important}
+  .doc{overflow:visible;padding:0}
+  .doc-in{max-width:none;font-size:12pt;line-height:1.5}
+  .doc-in .exercice,.doc-in .boite,.doc-in table{break-inside:avoid}
+  .doc-in h2,.doc-in h3{break-after:avoid}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 pre.code{background:var(--surface-2);border:1px solid var(--rule);border-left:3px solid #2e7d32;border-radius:6px;padding:8px 12px;margin:12px 0;overflow-x:auto;white-space:pre;font-size:.9em;max-width:100%}
 </style>
 <script data-goatcounter="https://malignemaths.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
@@ -296,10 +307,21 @@ function render(){
 }
 
 /* ---------- Lecteur ---------- */
+// PDF : le bouton ouvre le fichier. Cours/exercice rendu en HTML (pas encore de PDF) : le bouton imprime.
+function boutonFichier(href){
+  const b = $("#lect-ouvrir");
+  b.textContent = "Ouvrir le fichier"; b.href = href; b.target = "_blank"; b.onclick = null;
+}
+function boutonImprimer(){
+  const b = $("#lect-ouvrir");
+  b.textContent = "Imprimer / PDF"; b.removeAttribute("href"); b.removeAttribute("target");
+  b.style.cursor = "pointer";
+  b.onclick = ev => { ev.preventDefault(); window.print(); };
+}
 function ouvrir(e){
   const url = urlF(e.fichier);
   $("#lect-titre").textContent = e.ref;
-  $("#lect-ouvrir").href = url;
+  boutonFichier(url);
   $("#lecteur").hidden = false;
   const pdf = $("#lect-pdf"), doc = $("#lect-doc");
   pdf.hidden = true; doc.hidden = true; pdf.removeAttribute("src");
@@ -307,13 +329,13 @@ function ouvrir(e){
     // Si un PDF du même nom existe à côté du .tex, on l'affiche (figures et mise en page complètes).
     const pdfUrl = url.replace(/\.tex$/i, ".pdf");
     fetch(pdfUrl, {method:"HEAD"}).then(r => {
-      if (r.ok){ $("#lect-ouvrir").href = pdfUrl; pdf.hidden = false; pdf.src = pdfUrl; }
+      if (r.ok){ boutonFichier(pdfUrl); pdf.hidden = false; pdf.src = pdfUrl; }
       else ouvrir(Object.assign({}, e, {fichier:url, sansPdf:true}));
     }).catch(() => ouvrir(Object.assign({}, e, {fichier:url, sansPdf:true})));
     return;
   }
   if (/\.tex$/i.test(url)){
-    doc.hidden = false;
+    doc.hidden = false; boutonImprimer();
     $("#lect-contenu").innerHTML = "<p>Chargement…</p>";
     fetch(url + "?v=" + Date.now()).then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => rendreTex(t)).catch(() => { $("#lect-contenu").innerHTML = "<p>Le fichier n'a pas pu être chargé.</p>"; });
   } else {
@@ -323,14 +345,14 @@ function ouvrir(e){
 function ouvrirCours(c, mode){
   const url = API + "/api/frise-cours/" + encodeURIComponent(c.id);
   $("#lect-titre").textContent = "Cours — " + c.titre + (mode === "progressif" ? " (jusqu'à la notion en cours)" : "");
-  $("#lect-ouvrir").href = url;
+  boutonImprimer();
   $("#lecteur").hidden = false;
   const pdf = $("#lect-pdf"), doc = $("#lect-doc");
   pdf.hidden = true; doc.hidden = false; pdf.removeAttribute("src");
   $("#lect-contenu").innerHTML = "<p>Chargement…</p>";
   fetch(url).then(r => {
     if (!r.ok) throw 0;
-    if ((r.headers.get("Content-Type") || "").includes("pdf")){ doc.hidden = true; pdf.hidden = false; pdf.src = url; return; }
+    if ((r.headers.get("Content-Type") || "").includes("pdf")){ doc.hidden = true; pdf.hidden = false; pdf.src = url; boutonFichier(url); return; }
     return r.text().then(t => rendreTex(t));
   }).catch(() => { $("#lect-contenu").innerHTML = "<p>Le cours n'est pas disponible pour le moment.</p>"; });
 }
