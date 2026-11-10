@@ -204,7 +204,7 @@ const lisible = u => /\.(pdf|tex)$/i.test(String(u||""));
 const icon = (id, w=14) => `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const classe = new URLSearchParams(location.search).get("classe") || "terminale";
 let chapitres = [], idx = 0, maxIdx = 0;
-const ouverts = new Set(), deplies = new Set();   // stations dont la boîte « Exercices » est dépliée
+const ouverts = new Set();   // stations dont la boîte « Exercices » est dépliée
 
 const LIGNES = {"4eme":["4","#BB4D98","#fff"], "1ere":["1","#FFCD00","#0E2A47"], "terminale":["T","#E2231A","#fff"]};
 const LG = LIGNES[classe] || ["?","#1f5fbf","#fff"];
@@ -277,7 +277,6 @@ function render(){
   const c = chapitres[idx];
   if (!c){ $("#titre-chap").textContent = "Aucun chapitre pour l'instant"; $("#ligne").innerHTML = ""; return; }
   const cur = c.termine ? c.notions.length : Math.min(c.courant, c.notions.length - 1);
-  if (PROF && !deplies.has(c.id)){ deplies.add(c.id); c.notions.forEach(no => ouverts.add(c.id + ":" + no.id)); }
   $("#titre-chap").textContent = c.titre;
   $("#ici").innerHTML = c.termine ? "<b>Chapitre terminé</b>" : c.notions[cur] ? `On en est à : <b>${esc(c.notions[cur].titre)}</b>` : "";
   $("#prec").hidden = $("#suiv").hidden = chapitres.length < 2;
