@@ -55,6 +55,8 @@ a{color:inherit;text-decoration:none}
 .prof{position:absolute;right:max(20px,env(safe-area-inset-right,0px));top:calc(26px + env(safe-area-inset-top,0px));font-size:13px;font-weight:700;color:#5A6B7E;background:rgba(255,255,255,.85);padding:7px 12px;border-radius:8px}
 .prof:hover{color:var(--encre)}
 
+/* Ordinateur : l'encart « Ma ligne » est masqué (les lignes du plan suffisent) ; il reste sur téléphone */
+@media (min-width:761px){ .legende{display:none} }
 /* Téléphone : le plan en haut, la légende en dessous */
 @media (max-width:760px){
   html,body{height:auto}
