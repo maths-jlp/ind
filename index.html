@@ -57,6 +57,13 @@ a{color:inherit;text-decoration:none}
 
 /* Ordinateur : l'encart « Ma ligne » est masqué (les lignes du plan suffisent) ; il reste sur téléphone */
 @media (min-width:761px){ .legende{display:none} }
+/* Cartouche en haut à gauche plus compact (ne déborde plus sur la ligne 4) */
+@media (min-width:761px){
+  .cartouche{top:calc(12px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));padding:8px 14px;gap:10px;border-radius:10px}
+  .cartouche .m,.cartouche button.m{width:34px;height:34px;border-width:3px;font-size:16px}
+  .cartouche b{font-size:18px}
+  .cartouche span{font-size:11px}
+}
 /* Téléphone : le plan en haut, la légende en dessous */
 @media (max-width:760px){
   html,body{height:auto}
