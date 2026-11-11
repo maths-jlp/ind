@@ -82,6 +82,21 @@ a{color:inherit;text-decoration:none}
 .podcast:hover .st,.podcast:focus-visible .st{fill:#fff3c4}
 .podcast:hover .nom-st,.podcast:focus-visible .nom-st{fill:var(--encre)}
 .podcast:hover .casque circle,.podcast:focus-visible .casque circle{fill:var(--vert)}
+/* Mode prof (« Espace prof » + mot de passe) : même plan, mais chaque ligne mène à sa frise modifiable */
+.bandeau-prof{display:none}
+body.mode-prof .bandeau-prof{display:flex;position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:50;align-items:center;gap:12px;background:var(--encre);color:#fff;padding:7px 8px 7px 16px;border-radius:999px;font-size:14px;font-weight:700;box-shadow:0 6px 20px rgba(14,42,71,.25);white-space:nowrap}
+.bandeau-prof button{font:inherit;font-size:13px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:999px;padding:5px 12px;cursor:pointer}
+.bandeau-prof button:hover{background:rgba(255,255,255,.12)}
+body.mode-prof .prof{display:none}
+#login-prof{position:fixed;inset:0;z-index:100;background:rgba(14,42,71,.55);display:grid;place-items:center;padding:16px}
+#login-prof[hidden]{display:none}
+#login-prof form{background:#fff;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:10px;width:min(320px,100%);box-shadow:0 10px 40px rgba(0,0,0,.25)}
+#login-prof b{font-size:18px;color:var(--encre)}
+#login-prof small{font-size:13px;color:#5A6B7E;font-weight:600}
+#login-prof input{font:inherit;font-size:17px;padding:9px 11px;border:1px solid var(--gris);border-radius:8px}
+#login-prof .ok{font:inherit;font-size:17px;font-weight:800;padding:9px;border:0;border-radius:8px;background:var(--vert);color:#fff;cursor:pointer}
+#login-prof .annuler{font:inherit;font-size:14px;font-weight:600;background:none;border:0;color:#5A6B7E;cursor:pointer}
+#login-prof .msg{min-height:1.2em;color:var(--lt);font-size:14px;font-weight:600}
 </style>
 <script data-goatcounter="https://malignemaths.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -218,7 +233,18 @@ a{color:inherit;text-decoration:none}
     </div>
   </div>
 
-  <a class="prof" href="prof.html" target="_blank" rel="noopener">Espace prof</a>
+  <a class="prof" id="espace-prof" href="prof.html" target="_blank" rel="opener">Espace prof</a>
+  <div class="bandeau-prof" role="status">Mode prof · clique sur une ligne pour régler les statuts <button type="button" id="quitter-prof">Quitter</button></div>
+  <div id="login-prof" hidden>
+    <form id="form-login-prof" autocomplete="off">
+      <b>Espace prof</b>
+      <small>Mot de passe (ou connecte-toi dans l'onglet d'outils qui vient de s'ouvrir)</small>
+      <input id="login-mdp" type="password" placeholder="Mot de passe" aria-label="Mot de passe">
+      <button class="ok" type="submit">Entrer</button>
+      <div class="msg" id="login-msg"></div>
+      <button class="annuler" type="button" id="login-annuler">Annuler</button>
+    </form>
+  </div>
 
   <nav class="legende" aria-label="Choisir sa ligne">
     <h2>Ma ligne</h2>
@@ -251,6 +277,58 @@ document.querySelectorAll("[data-encours]").forEach(el => {
     document.addEventListener("click", ev => { if (!c.hidden && !c.contains(ev.target)) fermer(); });
     document.addEventListener("keydown", ev => { if (ev.key === "Escape") fermer(); });
   })();
+</script>
+<script>
+// « Espace prof » : (1) le lien ouvre le tableau d'outils (prof.html) dans un nouvel onglet ;
+// (2) cet onglet-ci demande le mot de passe puis passe en mode prof : même plan, mais chaque ligne mène
+// à sa frise en mode statuts (clic sur un exercice = Masqué → À faire → Fait ; masqués visibles à 50 %).
+// Le mot de passe saisi ici ou dans l'onglet d'outils déverrouille les deux (BroadcastChannel « qcm-auth »).
+(() => {
+  const API = "https://shrill-wave-d596.j2la2se2re.workers.dev";
+  const $ = id => document.getElementById(id);
+  const lire = () => { try { return sessionStorage.getItem("qcm-token") || ""; } catch (e) { return ""; } };
+  const box = $("login-prof"), msg = t => { $("login-msg").textContent = t || ""; };
+  const titre = document.title;
+  let bc = null; try { bc = new BroadcastChannel("qcm-auth"); } catch (e) {}
+  const liens = () => document.querySelectorAll('a[href^="ligne.html"]');
+  function modeProf(){
+    box.hidden = true; document.body.classList.add("mode-prof");
+    liens().forEach(a => { const u = new URL(a.getAttribute("href"), location.href); u.searchParams.set("prof", "1"); a.setAttribute("href", "ligne.html" + u.search); });
+    if (new URLSearchParams(location.search).get("prof") !== "1") history.replaceState(null, "", "index.html?prof=1");
+    document.title = "Mode prof · " + titre;
+  }
+  function modeEleve(){
+    box.hidden = true; document.body.classList.remove("mode-prof");
+    liens().forEach(a => { const u = new URL(a.getAttribute("href"), location.href); u.searchParams.delete("prof"); a.setAttribute("href", "ligne.html" + u.search); });
+    history.replaceState(null, "", "index.html"); document.title = titre;
+  }
+  async function verifier(tok, silencieux){
+    if (!tok) return false;
+    if (!silencieux) msg("Vérification…");
+    try {
+      const r = await fetch(API + "/api/admin/roster", { headers: { Authorization: "Bearer " + tok } });
+      if (r.status === 401){ try { sessionStorage.removeItem("qcm-token"); } catch (e) {} msg(silencieux ? "" : "Mot de passe incorrect."); return false; }
+      if (!r.ok) throw 0;
+      try { sessionStorage.setItem("qcm-token", tok); } catch (e) {}
+      if (bc) bc.postMessage({ token: tok });   // déverrouille aussi l'onglet d'outils
+      msg(""); modeProf(); return true;
+    } catch (e){ msg("Connexion au serveur impossible, réessayez."); return false; }
+  }
+  function demander(){ box.hidden = false; $("login-mdp").value = ""; msg(""); setTimeout(() => $("login-mdp").focus(), 0); }
+  if (bc) bc.onmessage = ev => {
+    const d = ev.data || {};
+    if (d.demande && lire()) bc.postMessage({ token: lire() });
+    else if (d.token && !box.hidden) verifier(d.token, true);   // mot de passe tapé dans l'onglet d'outils
+  };
+  // Pas de preventDefault : le navigateur ouvre prof.html dans un nouvel onglet, cet onglet-ci passe en mode prof
+  $("espace-prof").addEventListener("click", () => { if (lire()) verifier(lire(), true).then(ok => { if (!ok) demander(); }); else demander(); });
+  $("form-login-prof").addEventListener("submit", ev => { ev.preventDefault(); verifier($("login-mdp").value.trim(), false); });
+  $("login-annuler").addEventListener("click", modeEleve);
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !box.hidden) modeEleve(); });
+  $("quitter-prof").addEventListener("click", () => { try { sessionStorage.removeItem("qcm-token"); } catch (e) {} modeEleve(); });
+  // Retour depuis une ligne / une frise en mode prof : index.html?prof=1
+  if (new URLSearchParams(location.search).get("prof") === "1"){ if (lire()) verifier(lire(), true).then(ok => { if (!ok) demander(); }); else demander(); }
+})();
 </script>
 <script src="bouton-prof.js"></script>
 </body>

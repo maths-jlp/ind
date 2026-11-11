@@ -103,11 +103,19 @@ const CADENAS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" str
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const classe = LIGNES[new URLSearchParams(location.search).get("classe")] ? new URLSearchParams(location.search).get("classe") : "4eme";
 const L = LIGNES[classe];
+// Mode prof (?prof=1, arrivé depuis « Espace prof » de l'accueil) : chaque arrêt ouvre la frise en mode statuts,
+// y compris les chapitres encore fermés aux élèves.
+const PROF = new URLSearchParams(location.search).get("prof") === "1";
+if (PROF){ let t = ""; try { t = sessionStorage.getItem("qcm-token") || ""; } catch (e) {} if (!t) location.replace("index.html?prof=1"); }
+if (PROF){
+  document.querySelector(".retour").href = "index.html?prof=1";
+  document.querySelector(".sous").textContent = "Mode prof · clique sur un arrêt pour régler les statuts des exercices";
+}
 const root = document.documentElement.style;
 root.setProperty("--c", L.c); root.setProperty("--c-txt", L.txt); root.setProperty("--c-doux", L.doux);
 document.getElementById("pastille").textContent = L.num;
 document.getElementById("titre").textContent = "Ligne " + L.num + " · " + L.nom;
-document.title = "Ligne " + L.num + " · " + L.nom;
+document.title = (PROF ? "Mode prof · " : "") + "Ligne " + L.num + " · " + L.nom;
 
 fetch(API + "/api/frise/" + classe).then(r => r.json()).then(d => {
   const cle = x => x.ordre ?? x.cree ?? 0;
@@ -123,13 +131,13 @@ fetch(API + "/api/frise/" + classe).then(r => r.json()).then(d => {
     const n = c.notions ? c.notions.length : 0;
     const notionEnCours = c.notions && c.notions[Math.min(c.courant, n - 1)];
     const info = i === ici && !c.termine ? (notionEnCours ? "En ce moment : " + notionEnCours.titre : "En cours") : c.termine ? "Terminé" : n + " notion" + (n > 1 ? "s" : "");
-    if (verrou) return `<div class="arret verrou" data-i="${i}" aria-disabled="true" title="Ce chapitre n'est pas encore ouvert">
+    if (verrou && !PROF) return `<div class="arret verrou" data-i="${i}" aria-disabled="true" title="Ce chapitre n'est pas encore ouvert">
       <span class="rail"><span class="point">${CADENAS}</span></span>
       <span class="nom">${esc(c.titre)}</span>
       <span class="etat">Bientôt</span>
     </div>`;
-    return `<a class="arret ${etat}" data-i="${i}" href="frise.html?classe=${classe}&chap=${encodeURIComponent(c.id)}">
-      <span class="rail">${etat === "ici" ? '<span class="badge">On est ici</span>' : ""}<span class="point"></span></span>
+    return `<a class="arret ${etat}" data-i="${i}" href="frise.html?classe=${classe}${PROF ? "&prof=1" : ""}&chap=${encodeURIComponent(c.id)}"${verrou ? ' style="cursor:pointer" title="Chapitre fermé aux élèves"' : ""}>
+      <span class="rail">${etat === "ici" ? '<span class="badge">On est ici</span>' : ""}<span class="point">${verrou ? CADENAS : ""}</span></span>
       <span class="nom">${esc(c.titre)}</span>
       <span class="etat">${esc(info)}</span>
     </a>`;

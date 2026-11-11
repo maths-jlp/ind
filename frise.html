@@ -226,7 +226,7 @@ $("#legende").innerHTML =
 
 /* ---------- Mode prof (?prof=1) : mêmes frises, mais un clic sur un exercice change son statut — rien d'autre ---------- */
 let TOKEN = ""; try { TOKEN = sessionStorage.getItem("qcm-token") || ""; } catch(e){}
-const versConnexion = () => { try { sessionStorage.removeItem("qcm-token"); } catch(e){} location.replace("prof.html"); };
+const versConnexion = () => { try { sessionStorage.removeItem("qcm-token"); } catch(e){} location.replace("index.html?prof=1"); };
 if (PROF && !TOKEN) versConnexion();
 if (PROF){
   try { localStorage.setItem("prof-classe", classe); } catch(e){}
@@ -235,7 +235,7 @@ if (PROF){
   const lbl = $("#classe-lbl"), ks = Object.keys(CLASSES);
   lbl.style.cursor = "pointer"; lbl.title = "Changer de classe";
   lbl.onclick = () => { location.href = "frise.html?prof=1&classe=" + ks[(ks.indexOf(classe) + 1) % ks.length]; };
-  $("#retour-ligne").href = "index.html"; $("#retour-ligne").textContent = "◂ Accueil";
+  $("#retour-ligne").href = "ligne.html?prof=1&classe=" + encodeURIComponent(classe); $("#retour-ligne").textContent = "◂ Ligne " + LG[0];
   document.title = "Statuts — " + (CLASSES[classe] || classe);
 }
 const timersP = {};
