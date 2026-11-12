@@ -214,7 +214,7 @@ const LIVRES = {
   "terminale": n => "https://manuel.sesamath.net/numerique/index.php?ouvrage=mstsspe_2020&page_gauche=" + n,
   "4eme": n => "https://educadhoc.fr/reader/textbook/9782011560391/fxl/Page_" + n   // Mission Indigo 4e (Hachette)
 };
-const lienLivre = ref => { const m = /\bp(?:age)?\.?\s*(\d+)/i.exec(String(ref||"")); return LIVRES[classe] && m ? LIVRES[classe](m[1]) : ""; };
+const lienLivre = ref => { const m = /(?<![a-z])p(?:age)?\.?\s*(\d+)/i.exec(String(ref||"")); return LIVRES[classe] && m ? LIVRES[classe](m[1]) : ""; };
 const refHtml = e => { const u = lienLivre(e.ref); return u ? `<span class="ref ref-livre" data-livre="${esc(u)}" role="link" title="Ouvrir le manuel à cette page">${esc(e.ref)}</span>` : `<span class="ref">${esc(e.ref)}</span>`; };
 const PROF = new URLSearchParams(location.search).get("prof") === "1";
 let chapitres = [], idx = 0, maxIdx = 0;
